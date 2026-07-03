@@ -457,3 +457,16 @@ header h1 {
 #layer-links .secondary .lqi-label {
   opacity: 0.4;
 }
+
+/* Padre inferido: enlace estimado para un nodo sin padre (guiones largos). */
+#layer-links .inferred line {
+  opacity: 0.85;
+  stroke-dasharray: 9 4;
+}
+
+/* Dispositivo aislado (sin enlace principal): aro naranja para ubicarlo. */
+.device.isolated > circle,
+.device.isolated > rect {
+  stroke: #ff9800;
+  stroke-width: 3px;
+}

@@ -31,6 +31,12 @@ let linksDirty = false;
 // Ajustes de visualización (no se exportan, son solo de la vista).
 let iconScale = 0.7; // multiplicador del tamaño de los iconos
 let linkWidth = 1.2; // grosor de las líneas de enlace
+let connectIsolated = false; // conectar aislados a su mejor vecino (padre inferido)
+
+// Recalculados en cada render por computeTreeInfo().
+let primaryConnected = new Set(); // ids con al menos un enlace principal
+let inferredKeys = new Set(); // pares "a|b" promovidos como padre inferido
+let inferredConnected = new Set(); // ids conectados por padre inferido
 
 // Checkbox -> selector de lo que muestra/oculta.
 const TOGGLES = {
@@ -173,9 +179,16 @@ function renderLinks(svg, devices, links) {
 
     // Un enlace es secundario solo si primary === false (los datos viejos sin
     // el campo se tratan como principales para no ocultarlos por sorpresa).
-    const secondary = link.primary === false;
+    // Si "conectar aislados" promovió este par, se muestra como padre inferido.
+    const key = [link.from, link.to].sort().join("|");
+    const inferred = link.primary === false && inferredKeys.has(key);
+    const secondary = link.primary === false && !inferred;
     const edge = svgEl("g", {
-      class: secondary ? "link-edge secondary" : "link-edge",
+      class: inferred
+        ? "link-edge inferred"
+        : secondary
+        ? "link-edge secondary"
+        : "link-edge",
     });
 
     const line = svgEl("line", {
@@ -187,8 +200,9 @@ function renderLinks(svg, devices, links) {
       "stroke-width": linkWidth,
       "stroke-linecap": "round",
     });
+    const kind = inferred ? " · padre inferido" : secondary ? " · secundario" : "";
     line.appendChild(svgEl("title", {})).textContent =
-      `${link.from} -> ${link.to} (LQI ${link.lqi})${secondary ? " · secundario" : ""}`;
+      `${link.from} -> ${link.to} (LQI ${link.lqi})${kind}`;
     edge.appendChild(line);
 
     const midX = (from.x + to.x) / 2;
@@ -213,8 +227,14 @@ function renderDevices(svg, devices) {
   deviceEls = {};
   for (const [id, device] of Object.entries(devices)) {
     const style = DEVICE_STYLE[device.type] || DEVICE_STYLE.router;
+    // Aislado = no es coordinador, no tiene enlace principal y tampoco quedó
+    // conectado por un padre inferido.
+    const isolated =
+      device.type !== "coordinator" &&
+      !primaryConnected.has(id) &&
+      !inferredConnected.has(id);
     const devGroup = svgEl("g", {
-      class: `device device-${device.type}`,
+      class: `device device-${device.type}${isolated ? " isolated" : ""}`,
       "data-id": id,
     });
 
@@ -617,10 +637,38 @@ function restoreBackground() {
 
 // ---------- Render principal ----------
 
+// Calcula qué dispositivos tienen padre (enlace principal) y, si está activo
+// "conectar aislados", qué enlace de mayor LQI se promueve como padre inferido.
+function computeTreeInfo() {
+  primaryConnected = new Set();
+  for (const l of links) {
+    if (l.primary !== false) {
+      primaryConnected.add(l.from);
+      primaryConnected.add(l.to);
+    }
+  }
+  inferredKeys = new Set();
+  inferredConnected = new Set();
+  if (!connectIsolated) return;
+  for (const id of Object.keys(devices)) {
+    if (devices[id].type === "coordinator" || primaryConnected.has(id)) continue;
+    let best = null;
+    for (const l of links) {
+      if (l.from !== id && l.to !== id) continue;
+      if (best === null || l.lqi > best.lqi) best = l;
+    }
+    if (best) {
+      inferredKeys.add([best.from, best.to].sort().join("|"));
+      inferredConnected.add(id);
+    }
+  }
+}
+
 function renderMap() {
   const svg = document.getElementById("map");
   svg.innerHTML = "";
 
+  computeTreeInfo();
   const bounds = computeBounds();
   const padding = 60;
   svg.setAttribute(
@@ -989,6 +1037,13 @@ function setupViewControls() {
   if (linkSlider) {
     linkSlider.addEventListener("input", (e) => {
       linkWidth = Number(e.target.value);
+      renderMap();
+    });
+  }
+  const connectCb = document.getElementById("toggle-connect-isolated");
+  if (connectCb) {
+    connectCb.addEventListener("change", (e) => {
+      connectIsolated = e.target.checked;
       renderMap();
     });
   }

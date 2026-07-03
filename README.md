@@ -15,6 +15,7 @@ Visualizador de redes Zigbee (Zigbee2MQTT / Home Assistant) sobre el plano real 
 - **Editor de plano** integrado: dibujá habitaciones a click, cargá tu plano como imagen de fondo para calcar encima, borrá habitaciones y exportá el `rooms.js` actualizado (ver abajo).
 - **Importá el mapa de red de Zigbee2MQTT** (JSON) y la app crea los dispositivos y enlaces sola, conservando las posiciones que ya definiste (ver abajo).
 - Distingue **enlaces principales** (el árbol padre-hijo de la red) de los **secundarios** (vecinos/rutas de respaldo), que podés ocultar con un check para dejar el mapa legible.
+- Resalta con un **aro naranja** los dispositivos que quedaron sin padre en el escaneo, y opcionalmente les dibuja un **padre inferido** (su mejor vecino) para completar el árbol.
 
 ## Cómo usarlo
 
@@ -118,7 +119,7 @@ En vez de escribir las coordenadas a mano, podés dibujar el plano desde la prop
 - [x] v0.4 — Editor de plano: dibujar habitaciones a click, imagen de fondo como guía, exportar `rooms.js`
 - [x] v0.5 — Importar el JSON del mapa de red de Zigbee2MQTT para crear dispositivos y enlaces (conservando posiciones)
 - [x] v0.6 — Sliders de tamaño de iconos y grosor de líneas; nombres de dispositivo al pasar el mouse
-- [x] v0.7 — Enlaces principales (árbol padre-hijo) vs secundarios (vecinos), con check para ocultar los secundarios
+- [x] v0.7 — Enlaces principales (árbol padre-hijo) vs secundarios (vecinos), con check para ocultar los secundarios; resaltado de aislados y "padre inferido" opcional
 - [ ] v0.8 — Zoom y pan
 - [ ] v0.9 — Exportar a SVG / PNG
 - [ ] v1.0 — Estadísticas de red, alertas de LQI bajo, sugerencias de ubicación de routers
