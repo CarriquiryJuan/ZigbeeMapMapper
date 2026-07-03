@@ -743,7 +743,8 @@ function importZ2M(json) {
     const lqi = l.lqi != null ? l.lqi : l.linkquality != null ? l.linkquality : l.depth;
     const from = idByIeee[s];
     const to = idByIeee[t];
-    if (!from || !to || from === to || lqi == null) continue;
+    // lqi 0 = vecino sin medición válida; se descarta para no ensuciar el mapa.
+    if (!from || !to || from === to || lqi == null || lqi <= 0) continue;
     const key = [from, to].sort().join("|");
     const prev = pairMap.get(key);
     if (!prev || lqi > prev.lqi) pairMap.set(key, { from, to, lqi });
