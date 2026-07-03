@@ -1,0 +1,139 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: #1e1e1e;
+  color: #eee;
+}
+
+header {
+  padding: 16px 24px;
+  background: #141414;
+  border-bottom: 1px solid #333;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.layout {
+  display: flex;
+  height: calc(100vh - 57px);
+}
+
+.sidebar {
+  width: 240px;
+  padding: 16px;
+  background: #252525;
+  border-right: 1px solid #333;
+  overflow-y: auto;
+}
+
+.sidebar h2 {
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #aaa;
+  margin: 20px 0 10px;
+}
+
+.sidebar h2:first-child {
+  margin-top: 0;
+}
+
+.sidebar label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+}
+
+.dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.dot.coordinator {
+  background: #f5c518;
+}
+
+.dot.router {
+  background: #4caf50;
+  border-radius: 3px;
+}
+
+.dot.battery {
+  background: #2196f3;
+}
+
+.line {
+  width: 22px;
+  height: 3px;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.line.lqi-good {
+  background: #2e7d32;
+}
+
+.line.lqi-ok {
+  background: #1565c0;
+}
+
+.line.lqi-weak {
+  background: #6a1b9a;
+}
+
+.line.lqi-bad {
+  background: #c62828;
+}
+
+.map-container {
+  flex: 1;
+  overflow: auto;
+  background: #2a2a2a;
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.room-label {
+  fill: #333;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.device-label {
+  fill: #eee;
+  font-size: 12px;
+}
+
+.lqi-label {
+  fill: #ccc;
+  font-size: 11px;
+}

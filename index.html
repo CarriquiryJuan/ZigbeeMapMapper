@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mapa Zigbee de la Casa</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Mapa Zigbee de la Casa</h1>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <h2>Capas</h2>
+      <label><input type="checkbox" id="toggle-routers" checked /> Routers</label>
+      <label><input type="checkbox" id="toggle-sensors" checked /> Sensores / Coordinador</label>
+      <label><input type="checkbox" id="toggle-links" checked /> Enlaces</label>
+      <label><input type="checkbox" id="toggle-names" checked /> Nombres</label>
+      <label><input type="checkbox" id="toggle-lqi" checked /> LQI</label>
+
+      <h2>Leyenda</h2>
+      <ul class="legend">
+        <li><span class="dot coordinator"></span> Coordinador</li>
+        <li><span class="dot router"></span> Router</li>
+        <li><span class="dot battery"></span> Sensor a pila</li>
+      </ul>
+      <ul class="legend">
+        <li><span class="line lqi-good"></span> LQI &ge; 200</li>
+        <li><span class="line lqi-ok"></span> LQI 150-199</li>
+        <li><span class="line lqi-weak"></span> LQI 80-149</li>
+        <li><span class="line lqi-bad"></span> LQI &lt; 80</li>
+      </ul>
+    </aside>
+
+    <main class="map-container">
+      <svg id="map" xmlns="http://www.w3.org/2000/svg"></svg>
+    </main>
+  </div>
+
+  <script src="rooms.js"></script>
+  <script src="devices.js"></script>
+  <script src="links.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
