@@ -10,6 +10,9 @@ body {
 }
 
 header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   padding: 16px 24px;
   background: #141414;
   border-bottom: 1px solid #333;
@@ -20,17 +23,39 @@ header h1 {
   font-size: 1.3rem;
 }
 
+#toggle-sidebar {
+  background: #333;
+  color: #eee;
+  border: 1px solid #555;
+  border-radius: 4px;
+  width: 34px;
+  height: 34px;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+#toggle-sidebar:hover {
+  background: #3d3d3d;
+}
+
 .layout {
   display: flex;
   height: calc(100vh - 57px);
 }
 
 .sidebar {
-  width: 240px;
+  width: 300px;
   padding: 16px;
   background: #252525;
   border-right: 1px solid #333;
   overflow-y: auto;
+  flex-shrink: 0;
+}
+
+body.sidebar-collapsed .sidebar {
+  display: none;
 }
 
 .sidebar h2 {

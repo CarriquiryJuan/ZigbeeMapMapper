@@ -8,6 +8,7 @@
 </head>
 <body>
   <header>
+    <button id="toggle-sidebar" title="Mostrar/ocultar panel" aria-label="Mostrar/ocultar panel">☰</button>
     <h1>Mapa Zigbee de la Casa</h1>
   </header>
 
@@ -70,11 +71,9 @@
       <button id="btn-import">Importar</button>
 
       <h2>Guardar</h2>
-      <p class="hint">Arrastrá los dispositivos para reubicarlos. Los cambios son solo en memoria: usá estos botones para copiar los archivos actualizados.</p>
+      <p class="hint">Arrastrá los dispositivos para reubicarlos. Estos botones guardan directo en el archivo (elegís el archivo la primera vez). En navegadores sin soporte, se descarga el archivo.</p>
       <button id="btn-export">Guardar posiciones</button>
-      <textarea id="export-output" class="hidden" readonly rows="10"></textarea>
       <button id="btn-export-links">Exportar links.js</button>
-      <textarea id="links-output" class="hidden" readonly rows="10"></textarea>
 
       <h2>Plano</h2>
       <button id="btn-edit-plan">✏️ Editar plano</button>
@@ -108,7 +107,6 @@
         <button id="btn-clear-rooms">Borrar todas</button>
 
         <button id="btn-export-rooms">Exportar rooms.js</button>
-        <textarea id="rooms-output" class="hidden" readonly rows="10"></textarea>
       </div>
     </aside>
 

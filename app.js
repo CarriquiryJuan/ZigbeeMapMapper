@@ -859,66 +859,70 @@ function importZ2M(json) {
   );
 }
 
-async function copyToOutput(outputId, btn, source, okLabel, resetLabel) {
-  const output = document.getElementById(outputId);
-  output.value = source;
-  output.classList.remove("hidden");
-  output.focus();
-  output.select();
-  try {
-    await navigator.clipboard.writeText(source);
-    btn.textContent = okLabel;
-  } catch {
-    btn.textContent = "Seleccionado abajo — Ctrl+C para copiar";
+// Handles de archivo recordados en la sesión (File System Access API), para no
+// tener que volver a elegir el archivo en cada guardado.
+const fileHandles = {};
+
+// Guarda el contenido directo en un archivo. Si el navegador soporta la File
+// System Access API (Chrome/Edge sobre localhost o https), escribe directo en
+// el archivo elegido; si no, descarga el archivo como fallback.
+async function saveToFile(filename, contents, handleKey) {
+  if (window.showSaveFilePicker) {
+    try {
+      let handle = fileHandles[handleKey];
+      if (!handle) {
+        handle = await window.showSaveFilePicker({
+          suggestedName: filename,
+          types: [
+            {
+              description: "JavaScript",
+              accept: { "text/javascript": [".js"] },
+            },
+          ],
+        });
+        fileHandles[handleKey] = handle;
+      }
+      const writable = await handle.createWritable();
+      await writable.write(contents);
+      await writable.close();
+      return "saved";
+    } catch (e) {
+      if (e && e.name === "AbortError") return "cancelled";
+      // Cualquier otro error: caemos al fallback de descarga.
+    }
   }
-  btn.classList.remove("dirty");
-  setTimeout(() => {
-    btn.textContent = resetLabel;
-  }, 3000);
+  const blob = new Blob([contents], { type: "text/javascript" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+  return "downloaded";
+}
+
+function setupSaveButton(btnId, filename, handleKey, sourceFn, label) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    const res = await saveToFile(filename, sourceFn(), handleKey);
+    btn.disabled = false;
+    if (res === "cancelled") return;
+    if (res === "saved") btn.textContent = "Guardado ✓";
+    else if (res === "downloaded") btn.textContent = `Descargado ✓ (${filename})`;
+    else btn.textContent = "Error al guardar";
+    btn.classList.remove("dirty");
+    setTimeout(() => {
+      btn.textContent = label;
+    }, 3000);
+  });
 }
 
 function setupExport() {
-  const btnDev = document.getElementById("btn-export");
-  if (btnDev) {
-    btnDev.addEventListener("click", () => {
-      devicesDirty = false;
-      copyToOutput(
-        "export-output",
-        btnDev,
-        exportDevicesSource(),
-        "Copiado ✓ (pegalo en devices.js)",
-        "Guardar posiciones"
-      );
-    });
-  }
-
-  const btnRooms = document.getElementById("btn-export-rooms");
-  if (btnRooms) {
-    btnRooms.addEventListener("click", () => {
-      roomsDirty = false;
-      copyToOutput(
-        "rooms-output",
-        btnRooms,
-        exportRoomsSource(),
-        "Copiado ✓ (pegalo en rooms.js)",
-        "Exportar rooms.js"
-      );
-    });
-  }
-
-  const btnLinks = document.getElementById("btn-export-links");
-  if (btnLinks) {
-    btnLinks.addEventListener("click", () => {
-      linksDirty = false;
-      copyToOutput(
-        "links-output",
-        btnLinks,
-        exportLinksSource(),
-        "Copiado ✓ (pegalo en links.js)",
-        "Exportar links.js"
-      );
-    });
-  }
+  setupSaveButton("btn-export", "devices.js", "devices", exportDevicesSource, "Guardar posiciones");
+  setupSaveButton("btn-export-rooms", "rooms.js", "rooms", exportRoomsSource, "Exportar rooms.js");
+  setupSaveButton("btn-export-links", "links.js", "links", exportLinksSource, "Exportar links.js");
 }
 
 function parseAndImport(text) {
@@ -1024,6 +1028,15 @@ setupExport();
 setupEditor();
 setupImport();
 setupViewControls();
+setupSidebarToggle();
+
+function setupSidebarToggle() {
+  const btn = document.getElementById("toggle-sidebar");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    document.body.classList.toggle("sidebar-collapsed");
+  });
+}
 
 function setupViewControls() {
   const iconSlider = document.getElementById("icon-size");
