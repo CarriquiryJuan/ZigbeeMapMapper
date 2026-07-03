@@ -157,6 +157,158 @@ header h1 {
   display: none;
 }
 
+.sidebar h3 {
+  font-size: 0.8rem;
+  color: #aaa;
+  margin: 16px 0 8px;
+}
+
+#btn-edit-plan {
+  width: 100%;
+  padding: 8px 10px;
+  background: #333;
+  color: #eee;
+  border: 1px solid #555;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+#btn-edit-plan:hover {
+  background: #3d3d3d;
+}
+
+#btn-edit-plan.active {
+  background: #4a3d00;
+  border-color: #f5c518;
+  color: #f5c518;
+}
+
+#editor-panel.hidden {
+  display: none;
+}
+
+#editor-panel button {
+  padding: 6px 8px;
+  background: #333;
+  color: #eee;
+  border: 1px solid #555;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+#editor-panel button:hover {
+  background: #3d3d3d;
+}
+
+#editor-panel button.dirty {
+  border-color: #f5c518;
+  color: #f5c518;
+}
+
+#btn-export-rooms,
+#btn-clear-rooms,
+#btn-remove-bg {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.btn-row {
+  display: flex;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.btn-row button {
+  flex: 1;
+}
+
+.slider-label {
+  display: block;
+  font-size: 0.8rem;
+  color: #ccc;
+  margin: 8px 0;
+}
+
+.slider-label input {
+  width: 100%;
+}
+
+#bg-input {
+  width: 100%;
+  font-size: 0.75rem;
+  color: #ccc;
+}
+
+.room-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.room-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 0.82rem;
+}
+
+.room-list .swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.room-list .room-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-list .room-del {
+  padding: 1px 6px;
+  background: transparent;
+  border: 1px solid #644;
+  color: #d88;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.room-list .room-del:hover {
+  background: #522;
+}
+
+#rooms-output {
+  width: 100%;
+  margin-top: 8px;
+  background: #111;
+  color: #9cdcfe;
+  border: 1px solid #444;
+  border-radius: 4px;
+  font-family: "Consolas", monospace;
+  font-size: 0.72rem;
+  resize: vertical;
+}
+
+#rooms-output.hidden {
+  display: none;
+}
+
+#map.edit-mode {
+  cursor: crosshair;
+}
+
+#map.edit-mode #layer-devices {
+  pointer-events: none;
+}
+
 .map-container {
   flex: 1;
   overflow: auto;

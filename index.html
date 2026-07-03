@@ -37,6 +37,37 @@
       <p class="hint">Arrastrá los dispositivos para reubicarlos. Los cambios son solo en memoria: usá este botón para copiar el nuevo <code>devices.js</code>.</p>
       <button id="btn-export">Guardar posiciones</button>
       <textarea id="export-output" class="hidden" readonly rows="10"></textarea>
+
+      <h2>Plano</h2>
+      <button id="btn-edit-plan">✏️ Editar plano</button>
+
+      <div id="editor-panel" class="hidden">
+        <p class="hint">
+          Hacé <strong>click</strong> en el mapa para ir poniendo los vértices de una habitación.
+          <strong>Enter</strong> la cierra, <strong>Backspace</strong> deshace el último punto,
+          <strong>Esc</strong> cancela.
+        </p>
+        <div class="btn-row">
+          <button id="btn-finish-room">Cerrar (Enter)</button>
+          <button id="btn-undo-point">Deshacer punto</button>
+          <button id="btn-cancel-room">Cancelar</button>
+        </div>
+
+        <h3>Imagen de fondo (guía)</h3>
+        <p class="hint">Cargá tu plano para calcar encima. Se guarda solo en este navegador, nunca se sube al repo.</p>
+        <input type="file" id="bg-input" accept="image/*" />
+        <label class="slider-label">Opacidad
+          <input type="range" id="bg-opacity" min="0" max="1" step="0.05" value="0.5" />
+        </label>
+        <button id="btn-remove-bg">Quitar imagen</button>
+
+        <h3>Habitaciones</h3>
+        <ul id="room-list" class="room-list"></ul>
+        <button id="btn-clear-rooms">Borrar todas</button>
+
+        <button id="btn-export-rooms">Exportar rooms.js</button>
+        <textarea id="rooms-output" class="hidden" readonly rows="10"></textarea>
+      </div>
     </aside>
 
     <main class="map-container">

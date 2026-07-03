@@ -1,4 +1,5 @@
 const SVG_NS = "http://www.w3.org/2000/svg";
+const XLINK_NS = "http://www.w3.org/1999/xlink";
 
 const DEVICE_STYLE = {
   coordinator: { shape: "circle", r: 14, fill: "#f5c518", stroke: "#8a6d00" },
@@ -6,12 +7,28 @@ const DEVICE_STYLE = {
   battery: { shape: "circle", r: 10, fill: "#2196f3", stroke: "#0d47a1" },
 };
 
+// Paleta para colorear habitaciones nuevas dibujadas en el editor.
+const ROOM_PALETTE = [
+  "#c9a227", "#6f8fc9", "#4fa8a0", "#d08b6b",
+  "#7986cb", "#8d6e63", "#9575cd", "#4db6ac",
+];
+
 // Enlaces que tocan cada dispositivo, para reposicionarlos durante el drag
 // sin tener que re-renderizar todo el SVG. Se llena en renderLinks().
 let linkRefs = [];
 // Elementos SVG (shape + label) de cada dispositivo, para reposicionarlos.
 let deviceEls = {};
-let dirty = false;
+let devicesDirty = false;
+let roomsDirty = false;
+
+// --- Estado del editor de plano ---
+let editMode = false;
+let editPoints = []; // vértices [x, y] del polígono en construcción
+let roomColorIndex = 0;
+// Imagen de fondo (guía para calcar). Solo vive en el navegador (localStorage),
+// nunca se sube al repo.
+let bgImage = null; // { href, x, y, width, height }
+let bgOpacity = 0.5;
 
 function lqiColor(lqi) {
   if (lqi >= 200) return "#2e7d32"; // verde
@@ -28,6 +45,17 @@ function svgEl(tag, attrs) {
   return el;
 }
 
+function slugify(s) {
+  return (
+    s
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "") || "room"
+  );
+}
+
 function polygonBounds(rooms) {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const room of rooms) {
@@ -41,10 +69,37 @@ function polygonBounds(rooms) {
   return { minX, minY, maxX, maxY };
 }
 
+function computeBounds() {
+  const b = polygonBounds(rooms);
+  if (bgImage) {
+    b.minX = Math.min(b.minX, bgImage.x);
+    b.minY = Math.min(b.minY, bgImage.y);
+    b.maxX = Math.max(b.maxX, bgImage.x + bgImage.width);
+    b.maxY = Math.max(b.maxY, bgImage.y + bgImage.height);
+  }
+  if (!isFinite(b.minX)) return { minX: 0, minY: 0, maxX: 1000, maxY: 600 };
+  return b;
+}
+
 function polygonCentroid(polygon) {
   const x = polygon.reduce((sum, p) => sum + p[0], 0) / polygon.length;
   const y = polygon.reduce((sum, p) => sum + p[1], 0) / polygon.length;
   return { x, y };
+}
+
+function renderBackground(svg) {
+  if (!bgImage) return;
+  const im = svgEl("image", {
+    x: bgImage.x,
+    y: bgImage.y,
+    width: bgImage.width,
+    height: bgImage.height,
+    opacity: bgOpacity,
+    preserveAspectRatio: "none",
+  });
+  im.setAttributeNS(XLINK_NS, "href", bgImage.href);
+  im.setAttribute("href", bgImage.href);
+  svg.appendChild(im);
 }
 
 function renderRooms(svg, rooms) {
@@ -197,10 +252,16 @@ function updateDevicePosition(id) {
   }
 }
 
-function markDirty() {
-  if (dirty) return;
-  dirty = true;
+function markDevicesDirty() {
+  if (devicesDirty) return;
+  devicesDirty = true;
   const btn = document.getElementById("btn-export");
+  if (btn) btn.classList.add("dirty");
+}
+
+function markRoomsDirty() {
+  roomsDirty = true;
+  const btn = document.getElementById("btn-export-rooms");
   if (btn) btn.classList.add("dirty");
 }
 
@@ -208,6 +269,7 @@ function makeDraggable(devGroup, id) {
   let offset = { x: 0, y: 0 };
 
   devGroup.addEventListener("pointerdown", (evt) => {
+    if (editMode) return; // en modo edición no se arrastran dispositivos
     evt.preventDefault();
     devGroup.setPointerCapture(evt.pointerId);
     const svg = document.getElementById("map");
@@ -224,7 +286,7 @@ function makeDraggable(devGroup, id) {
     devices[id].x = Math.round(pt.x - offset.x);
     devices[id].y = Math.round(pt.y - offset.y);
     updateDevicePosition(id);
-    markDirty();
+    markDevicesDirty();
   });
 
   const endDrag = (evt) => {
@@ -237,11 +299,204 @@ function makeDraggable(devGroup, id) {
   devGroup.addEventListener("pointercancel", endDrag);
 }
 
+// ---------- Editor de plano ----------
+
+function updateEditorLayer(cursor) {
+  const layer = document.getElementById("editor-layer");
+  if (!layer) return;
+  layer.innerHTML = "";
+  if (!editMode || editPoints.length === 0) return;
+
+  const pts = editPoints.map((p) => p.join(",")).join(" ");
+  layer.appendChild(
+    svgEl("polyline", {
+      points: pts,
+      fill: "rgba(245,197,24,0.15)",
+      stroke: "#f5c518",
+      "stroke-width": "2",
+      "stroke-dasharray": "5 3",
+    })
+  );
+
+  if (cursor) {
+    const last = editPoints[editPoints.length - 1];
+    layer.appendChild(
+      svgEl("line", {
+        x1: last[0],
+        y1: last[1],
+        x2: cursor.x,
+        y2: cursor.y,
+        stroke: "#f5c518",
+        "stroke-width": "1.5",
+        "stroke-dasharray": "3 3",
+        opacity: "0.7",
+      })
+    );
+  }
+
+  for (const [x, y] of editPoints) {
+    layer.appendChild(
+      svgEl("circle", { cx: x, cy: y, r: 5, fill: "#f5c518", stroke: "#000", "stroke-width": "1" })
+    );
+  }
+}
+
+function onEditClick(evt) {
+  if (!editMode) return;
+  const svg = document.getElementById("map");
+  const pt = toSvgPoint(svg, evt);
+  editPoints.push([Math.round(pt.x), Math.round(pt.y)]);
+  updateEditorLayer();
+}
+
+function onEditMove(evt) {
+  if (!editMode || editPoints.length === 0) return;
+  const svg = document.getElementById("map");
+  const pt = toSvgPoint(svg, evt);
+  updateEditorLayer({ x: pt.x, y: pt.y });
+}
+
+function finishRoom() {
+  if (!editMode) return;
+  if (editPoints.length < 3) {
+    alert("Necesitás al menos 3 puntos para cerrar una habitación.");
+    return;
+  }
+  const name = prompt("Nombre de la habitación:", "Nueva");
+  if (name === null) return; // cancelado: conserva los puntos
+  let id = slugify(name);
+  const base = id;
+  let n = 2;
+  while (rooms.some((r) => r.id === id)) id = `${base}_${n++}`;
+  const color = ROOM_PALETTE[roomColorIndex++ % ROOM_PALETTE.length];
+  rooms.push({ id, name, color, polygon: editPoints.slice() });
+  editPoints = [];
+  renderMap();
+  refreshRoomList();
+  markRoomsDirty();
+}
+
+function undoPoint() {
+  editPoints.pop();
+  updateEditorLayer();
+}
+
+function cancelRoom() {
+  editPoints = [];
+  updateEditorLayer();
+}
+
+function deleteRoom(id) {
+  const room = rooms.find((r) => r.id === id);
+  if (!room) return;
+  if (!confirm(`¿Borrar la habitación "${room.name}"?`)) return;
+  const idx = rooms.indexOf(room);
+  rooms.splice(idx, 1);
+  renderMap();
+  refreshRoomList();
+  markRoomsDirty();
+}
+
+function clearAllRooms() {
+  if (!confirm("¿Borrar TODAS las habitaciones? (útil para redibujar el plano desde cero sobre la imagen de fondo)")) return;
+  rooms.splice(0, rooms.length);
+  renderMap();
+  refreshRoomList();
+  markRoomsDirty();
+}
+
+function toggleEditMode() {
+  editMode = !editMode;
+  const svg = document.getElementById("map");
+  svg.classList.toggle("edit-mode", editMode);
+  const panel = document.getElementById("editor-panel");
+  if (panel) panel.classList.toggle("hidden", !editMode);
+  const btn = document.getElementById("btn-edit-plan");
+  if (btn) {
+    btn.classList.toggle("active", editMode);
+    btn.textContent = editMode ? "✏️ Editando plano — salir" : "✏️ Editar plano";
+  }
+  if (!editMode) editPoints = [];
+  updateEditorLayer();
+  refreshRoomList();
+}
+
+function refreshRoomList() {
+  const list = document.getElementById("room-list");
+  if (!list) return;
+  list.innerHTML = "";
+  for (const r of rooms) {
+    const li = document.createElement("li");
+
+    const swatch = document.createElement("span");
+    swatch.className = "swatch";
+    swatch.style.background = r.color;
+
+    const span = document.createElement("span");
+    span.className = "room-name";
+    span.textContent = r.name;
+
+    const del = document.createElement("button");
+    del.className = "room-del";
+    del.textContent = "✕";
+    del.title = "Borrar habitación";
+    del.addEventListener("click", () => deleteRoom(r.id));
+
+    li.appendChild(swatch);
+    li.appendChild(span);
+    li.appendChild(del);
+    list.appendChild(li);
+  }
+}
+
+// ---------- Imagen de fondo ----------
+
+function loadBackground(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      bgImage = {
+        href: reader.result,
+        x: 0,
+        y: 0,
+        width: img.naturalWidth,
+        height: img.naturalHeight,
+      };
+      try {
+        localStorage.setItem("zbmap_bg", JSON.stringify(bgImage));
+      } catch (e) {
+        /* imagen demasiado grande para localStorage: se usa solo esta sesión */
+      }
+      renderMap();
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeBackground() {
+  bgImage = null;
+  try {
+    localStorage.removeItem("zbmap_bg");
+  } catch (e) {}
+  renderMap();
+}
+
+function restoreBackground() {
+  try {
+    const s = localStorage.getItem("zbmap_bg");
+    if (s) bgImage = JSON.parse(s);
+  } catch (e) {}
+}
+
+// ---------- Render principal ----------
+
 function renderMap() {
   const svg = document.getElementById("map");
   svg.innerHTML = "";
 
-  const bounds = polygonBounds(rooms);
+  const bounds = computeBounds();
   const padding = 60;
   svg.setAttribute(
     "viewBox",
@@ -250,10 +505,145 @@ function renderMap() {
     } ${bounds.maxY - bounds.minY + padding * 2}`
   );
 
+  renderBackground(svg);
   renderRooms(svg, rooms);
   renderLinks(svg, devices, links);
   renderDevices(svg, devices);
+  svg.appendChild(svgEl("g", { id: "editor-layer" }));
+  updateEditorLayer();
 }
+
+// ---------- Exportar código fuente ----------
+
+function exportDevicesSource() {
+  const lines = ["const devices = {"];
+  for (const [id, d] of Object.entries(devices)) {
+    lines.push(
+      `  ${id}: { name: ${JSON.stringify(d.name)}, type: ${JSON.stringify(
+        d.type
+      )}, room: ${JSON.stringify(d.room)}, x: ${Math.round(
+        d.x
+      )}, y: ${Math.round(d.y)} },`
+    );
+  }
+  lines.push("};");
+  return lines.join("\n");
+}
+
+function exportRoomsSource() {
+  const lines = ["const rooms = ["];
+  for (const r of rooms) {
+    const poly = r.polygon.map((p) => `[${p[0]}, ${p[1]}]`).join(", ");
+    lines.push(
+      `  { id: ${JSON.stringify(r.id)}, name: ${JSON.stringify(
+        r.name
+      )}, color: ${JSON.stringify(r.color)}, polygon: [${poly}] },`
+    );
+  }
+  lines.push("];");
+  return lines.join("\n");
+}
+
+async function copyToOutput(outputId, btn, source, okLabel, resetLabel) {
+  const output = document.getElementById(outputId);
+  output.value = source;
+  output.classList.remove("hidden");
+  output.focus();
+  output.select();
+  try {
+    await navigator.clipboard.writeText(source);
+    btn.textContent = okLabel;
+  } catch {
+    btn.textContent = "Seleccionado abajo — Ctrl+C para copiar";
+  }
+  btn.classList.remove("dirty");
+  setTimeout(() => {
+    btn.textContent = resetLabel;
+  }, 3000);
+}
+
+function setupExport() {
+  const btnDev = document.getElementById("btn-export");
+  if (btnDev) {
+    btnDev.addEventListener("click", () => {
+      devicesDirty = false;
+      copyToOutput(
+        "export-output",
+        btnDev,
+        exportDevicesSource(),
+        "Copiado ✓ (pegalo en devices.js)",
+        "Guardar posiciones"
+      );
+    });
+  }
+
+  const btnRooms = document.getElementById("btn-export-rooms");
+  if (btnRooms) {
+    btnRooms.addEventListener("click", () => {
+      roomsDirty = false;
+      copyToOutput(
+        "rooms-output",
+        btnRooms,
+        exportRoomsSource(),
+        "Copiado ✓ (pegalo en rooms.js)",
+        "Exportar rooms.js"
+      );
+    });
+  }
+}
+
+function setupEditor() {
+  const svg = document.getElementById("map");
+  svg.addEventListener("click", onEditClick);
+  svg.addEventListener("mousemove", onEditMove);
+
+  const bind = (id, fn) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener("click", fn);
+  };
+  bind("btn-edit-plan", toggleEditMode);
+  bind("btn-finish-room", finishRoom);
+  bind("btn-undo-point", undoPoint);
+  bind("btn-cancel-room", cancelRoom);
+  bind("btn-clear-rooms", clearAllRooms);
+  bind("btn-remove-bg", removeBackground);
+
+  const bgInput = document.getElementById("bg-input");
+  if (bgInput) {
+    bgInput.addEventListener("change", (e) => {
+      if (e.target.files && e.target.files[0]) loadBackground(e.target.files[0]);
+    });
+  }
+
+  const opacity = document.getElementById("bg-opacity");
+  if (opacity) {
+    opacity.addEventListener("input", (e) => {
+      bgOpacity = Number(e.target.value);
+      renderMap();
+    });
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (!editMode) return;
+    const tag = (e.target.tagName || "").toUpperCase();
+    if (tag === "INPUT" || tag === "TEXTAREA") return;
+    if (e.key === "Enter") {
+      e.preventDefault();
+      finishRoom();
+    } else if (e.key === "Escape") {
+      cancelRoom();
+    } else if (e.key === "Backspace") {
+      e.preventDefault();
+      undoPoint();
+    }
+  });
+}
+
+restoreBackground();
+renderMap();
+setupToggles();
+setupExport();
+setupEditor();
 
 function setupToggles() {
   const toggles = {
@@ -274,48 +664,3 @@ function setupToggles() {
     });
   }
 }
-
-function exportDevicesSource() {
-  const lines = ["const devices = {"];
-  for (const [id, d] of Object.entries(devices)) {
-    lines.push(
-      `  ${id}: { name: ${JSON.stringify(d.name)}, type: ${JSON.stringify(
-        d.type
-      )}, room: ${JSON.stringify(d.room)}, x: ${Math.round(
-        d.x
-      )}, y: ${Math.round(d.y)} },`
-    );
-  }
-  lines.push("};");
-  return lines.join("\n");
-}
-
-function setupExport() {
-  const btn = document.getElementById("btn-export");
-  const output = document.getElementById("export-output");
-  if (!btn || !output) return;
-
-  btn.addEventListener("click", async () => {
-    const source = exportDevicesSource();
-    output.value = source;
-    output.classList.remove("hidden");
-    output.focus();
-    output.select();
-
-    try {
-      await navigator.clipboard.writeText(source);
-      btn.textContent = "Copiado ✓ (pegalo en devices.js)";
-    } catch {
-      btn.textContent = "Seleccionado abajo — Ctrl+C para copiar";
-    }
-    btn.classList.remove("dirty");
-    dirty = false;
-    setTimeout(() => {
-      btn.textContent = "Guardar posiciones";
-    }, 3000);
-  });
-}
-
-renderMap();
-setupToggles();
-setupExport();
