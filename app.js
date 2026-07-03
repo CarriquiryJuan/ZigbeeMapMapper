@@ -31,12 +31,11 @@ let linksDirty = false;
 // Ajustes de visualización (no se exportan, son solo de la vista).
 let iconScale = 0.7; // multiplicador del tamaño de los iconos
 let linkWidth = 1.2; // grosor de las líneas de enlace
-let connectIsolated = false; // conectar aislados a su mejor vecino (padre inferido)
+let connectIsolated = true; // completar el árbol conectando los grupos sueltos
 
 // Recalculados en cada render por computeTreeInfo().
-let primaryConnected = new Set(); // ids con al menos un enlace principal
-let inferredKeys = new Set(); // pares "a|b" promovidos como padre inferido
-let inferredConnected = new Set(); // ids conectados por padre inferido
+let inferredKeys = new Set(); // pares "a|b" promovidos para unir grupos
+let reachableFromCoord = new Set(); // ids alcanzables desde el coordinador
 
 // Checkbox -> selector de lo que muestra/oculta.
 const TOGGLES = {
@@ -227,12 +226,10 @@ function renderDevices(svg, devices) {
   deviceEls = {};
   for (const [id, device] of Object.entries(devices)) {
     const style = DEVICE_STYLE[device.type] || DEVICE_STYLE.router;
-    // Aislado = no es coordinador, no tiene enlace principal y tampoco quedó
-    // conectado por un padre inferido.
+    // Aislado = no es coordinador y no queda conectado al coordinador (ni por
+    // enlaces principales ni, si está activo, por los inferidos).
     const isolated =
-      device.type !== "coordinator" &&
-      !primaryConnected.has(id) &&
-      !inferredConnected.has(id);
+      device.type !== "coordinator" && !reachableFromCoord.has(id);
     const devGroup = svgEl("g", {
       class: `device device-${device.type}${isolated ? " isolated" : ""}`,
       "data-id": id,
@@ -637,29 +634,67 @@ function restoreBackground() {
 
 // ---------- Render principal ----------
 
-// Calcula qué dispositivos tienen padre (enlace principal) y, si está activo
-// "conectar aislados", qué enlace de mayor LQI se promueve como padre inferido.
+// Arma el árbol de la red y calcula qué dispositivos quedan alcanzables desde
+// el coordinador. Primero une por enlaces principales (padre-hijo). Si está
+// activo "completar árbol", conecta los grupos que quedan sueltos usando el
+// mejor enlace secundario disponible (algoritmo de Boruvka), porque el backbone
+// de routers suele reportarse como "vecino" (secundario), no como padre-hijo.
 function computeTreeInfo() {
-  primaryConnected = new Set();
+  inferredKeys = new Set();
+  const parent = {};
+  const find = (x) => {
+    while (parent[x] !== x) {
+      parent[x] = parent[parent[x]];
+      x = parent[x];
+    }
+    return x;
+  };
+  const union = (a, b) => {
+    const ra = find(a);
+    const rb = find(b);
+    if (ra !== rb) parent[ra] = rb;
+  };
+  for (const id of Object.keys(devices)) parent[id] = id;
+
+  // 1) Unir por enlaces principales (árbol padre-hijo).
   for (const l of links) {
-    if (l.primary !== false) {
-      primaryConnected.add(l.from);
-      primaryConnected.add(l.to);
+    if (l.primary === false) continue;
+    if (!(l.from in devices) || !(l.to in devices)) continue;
+    union(l.from, l.to);
+  }
+
+  // 2) Conectar grupos sueltos con el mejor enlace secundario entre componentes,
+  //    repitiendo hasta que no queden uniones posibles.
+  if (connectIsolated) {
+    let changed = true;
+    while (changed) {
+      changed = false;
+      const bestEdge = {}; // raíz de componente -> mejor enlace hacia afuera
+      for (const l of links) {
+        if (l.primary !== false) continue;
+        if (!(l.from in devices) || !(l.to in devices)) continue;
+        const ra = find(l.from);
+        const rb = find(l.to);
+        if (ra === rb) continue;
+        if (!bestEdge[ra] || l.lqi > bestEdge[ra].lqi) bestEdge[ra] = l;
+        if (!bestEdge[rb] || l.lqi > bestEdge[rb].lqi) bestEdge[rb] = l;
+      }
+      for (const root of Object.keys(bestEdge)) {
+        const l = bestEdge[root];
+        if (find(l.from) === find(l.to)) continue;
+        union(l.from, l.to);
+        inferredKeys.add([l.from, l.to].sort().join("|"));
+        changed = true;
+      }
     }
   }
-  inferredKeys = new Set();
-  inferredConnected = new Set();
-  if (!connectIsolated) return;
-  for (const id of Object.keys(devices)) {
-    if (devices[id].type === "coordinator" || primaryConnected.has(id)) continue;
-    let best = null;
-    for (const l of links) {
-      if (l.from !== id && l.to !== id) continue;
-      if (best === null || l.lqi > best.lqi) best = l;
-    }
-    if (best) {
-      inferredKeys.add([best.from, best.to].sort().join("|"));
-      inferredConnected.add(id);
+
+  // 3) Alcanzables desde el coordinador (para resaltar los que no lo están).
+  reachableFromCoord = new Set();
+  if ("coordinator" in parent) {
+    const coordRoot = find("coordinator");
+    for (const id of Object.keys(devices)) {
+      if (find(id) === coordRoot) reachableFromCoord.add(id);
     }
   }
 }

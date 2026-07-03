@@ -19,7 +19,7 @@
       <label><input type="checkbox" id="toggle-sensors" checked /> Sensores / Coordinador</label>
       <label><input type="checkbox" id="toggle-links" checked /> Enlaces</label>
       <label><input type="checkbox" id="toggle-secondary" /> Enlaces secundarios (vecinos)</label>
-      <label><input type="checkbox" id="toggle-connect-isolated" /> Conectar aislados (mejor vecino)</label>
+      <label><input type="checkbox" id="toggle-connect-isolated" checked /> Completar árbol (conectar grupos sueltos)</label>
       <label><input type="checkbox" id="toggle-names" checked /> Nombres de habitaciones</label>
       <label><input type="checkbox" id="toggle-lqi" checked /> LQI</label>
       <p class="hint">El nombre de cada dispositivo aparece al pasar el mouse por encima.</p>
@@ -47,9 +47,11 @@
       <p class="hint">
         Enlace <strong>principal</strong> = camino padre-hijo (árbol de la red).
         <strong>Secundario</strong> = vecino/ruta de respaldo (línea punteada tenue).
-        Un nodo con <strong>aro naranja</strong> quedó sin padre en este escaneo
-        (dormido o reportado como vecino); "Conectar aislados" le dibuja un padre
-        estimado por su mejor vecino.
+        Como los routers se ven entre sí como "vecinos" (secundario), el árbol
+        puro queda en varios grupos. <strong>Completar árbol</strong> los une por
+        su mejor enlace (línea de guiones largos = enlace estimado). Un nodo con
+        <strong>aro naranja</strong> quedó sin ningún enlace en este escaneo
+        (dormido); conviene reescanear con ese dispositivo activo.
       </p>
 
       <h2>Importar de Zigbee2MQTT</h2>

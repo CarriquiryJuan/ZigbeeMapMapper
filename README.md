@@ -22,7 +22,7 @@ Un visualizador de redes Zigbee (Zigbee2MQTT / Home Assistant) sobre el plano re
 - Built-in **floor-plan editor**: draw rooms by clicking, load your plan as a background image to trace over, delete rooms.
 - **Import the Zigbee2MQTT network map** (JSON) and it creates the devices and links automatically, keeping the positions you already set.
 - Distinguishes **primary links** (the parent-child tree of the network) from **secondary** ones (neighbours / backup routes), which you can hide with a checkbox to keep the map readable.
-- Highlights with an **orange ring** the devices left with no parent in the scan, and can optionally draw an **inferred parent** (their best neighbour) to complete the tree.
+- Because routers see each other as *neighbours* (secondary), the pure parent-child tree splits into pieces; **"Complete tree"** reconnects the floating groups through their best link (inferred edges), and an **orange ring** flags devices that had no link at all in the scan (asleep — rescan them).
 - **Saves changes straight to the file** (`devices.js` / `rooms.js` / `links.js`) — no copy-paste.
 
 ### How to use it
@@ -111,7 +111,7 @@ MIT — see [LICENSE](LICENSE).
 - **Editor de plano** integrado: dibujá habitaciones a click, cargá tu plano como imagen de fondo para calcar encima, borrá habitaciones.
 - **Importá el mapa de red de Zigbee2MQTT** (JSON) y la app crea los dispositivos y enlaces sola, conservando las posiciones que ya definiste.
 - Distingue **enlaces principales** (el árbol padre-hijo de la red) de los **secundarios** (vecinos/rutas de respaldo), que podés ocultar con un check para dejar el mapa legible.
-- Resalta con un **aro naranja** los dispositivos que quedaron sin padre en el escaneo, y opcionalmente les dibuja un **padre inferido** (su mejor vecino) para completar el árbol.
+- Como los routers se ven entre sí como *vecinos* (secundario), el árbol padre-hijo puro queda partido en pedazos; **"Completar árbol"** reconecta los grupos sueltos por su mejor enlace (enlaces inferidos), y un **aro naranja** marca los dispositivos que no tuvieron ningún enlace en el escaneo (dormidos — reescanealos).
 - **Guarda los cambios directo en el archivo** (`devices.js` / `rooms.js` / `links.js`) — sin copiar y pegar.
 
 ### Cómo usarlo
