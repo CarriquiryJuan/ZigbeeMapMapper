@@ -447,3 +447,13 @@ header h1 {
   fill: #ccc;
   font-size: 11px;
 }
+
+/* Enlaces secundarios (vecinos): tenues y punteados para que no dominen. */
+#layer-links .secondary line {
+  opacity: 0.3;
+  stroke-dasharray: 4 3;
+}
+
+#layer-links .secondary .lqi-label {
+  opacity: 0.4;
+}

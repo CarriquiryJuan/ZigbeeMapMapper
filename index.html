@@ -17,6 +17,7 @@
       <label><input type="checkbox" id="toggle-routers" checked /> Routers</label>
       <label><input type="checkbox" id="toggle-sensors" checked /> Sensores / Coordinador</label>
       <label><input type="checkbox" id="toggle-links" checked /> Enlaces</label>
+      <label><input type="checkbox" id="toggle-secondary" /> Enlaces secundarios (vecinos)</label>
       <label><input type="checkbox" id="toggle-names" checked /> Nombres de habitaciones</label>
       <label><input type="checkbox" id="toggle-lqi" checked /> LQI</label>
       <p class="hint">El nombre de cada dispositivo aparece al pasar el mouse por encima.</p>
@@ -41,6 +42,10 @@
         <li><span class="line lqi-weak"></span> LQI 80-149</li>
         <li><span class="line lqi-bad"></span> LQI &lt; 80</li>
       </ul>
+      <p class="hint">
+        Enlace <strong>principal</strong> = camino padre-hijo (árbol de la red).
+        <strong>Secundario</strong> = vecino/ruta de respaldo (línea punteada tenue).
+      </p>
 
       <h2>Importar de Zigbee2MQTT</h2>
       <p class="hint">

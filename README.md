@@ -2,7 +2,7 @@
 
 Visualizador de redes Zigbee (Zigbee2MQTT / Home Assistant) sobre el plano real de tu casa. Sin instalar nada: es HTML + CSS + JS puro, se abre con doble clic en `index.html`.
 
-![status](https://img.shields.io/badge/version-0.6-blue)
+![status](https://img.shields.io/badge/version-0.7-blue)
 
 ## ¿Qué hace?
 
@@ -14,6 +14,7 @@ Visualizador de redes Zigbee (Zigbee2MQTT / Home Assistant) sobre el plano real 
 - Arrastrá cualquier dispositivo con el mouse: las líneas se recalculan solas. Los cambios viven solo en memoria — usá el botón "Guardar posiciones" para copiar el `devices.js` actualizado y pegarlo en el archivo.
 - **Editor de plano** integrado: dibujá habitaciones a click, cargá tu plano como imagen de fondo para calcar encima, borrá habitaciones y exportá el `rooms.js` actualizado (ver abajo).
 - **Importá el mapa de red de Zigbee2MQTT** (JSON) y la app crea los dispositivos y enlaces sola, conservando las posiciones que ya definiste (ver abajo).
+- Distingue **enlaces principales** (el árbol padre-hijo de la red) de los **secundarios** (vecinos/rutas de respaldo), que podés ocultar con un check para dejar el mapa legible.
 
 ## Cómo usarlo
 
@@ -89,6 +90,7 @@ La respuesta llega al topic `zigbee2mqtt/bridge/response/networkmap`. Copiá tod
 2. Clic en **Importar**. La app:
    - crea un dispositivo por cada nodo (mapeando el tipo: Coordinator → coordinador, Router → router, EndDevice → sensor a pila);
    - crea los enlaces con su LQI, quedándose con el mejor valor cuando el enlace aparece en ambos sentidos;
+   - marca cada enlace como **principal** (relación padre-hijo del árbol Zigbee) o **secundario** (vecino/hermano), usando el campo `relationship` del mapa. Los secundarios se ocultan por defecto (check "Enlaces secundarios") para que el mapa quede legible;
    - **conserva la posición** de los dispositivos que ya tenías ubicados (los reconoce por el nombre), y coloca los nuevos en una zona de *staging* debajo del plano.
 3. Arrastrá los dispositivos nuevos a su lugar en el plano.
 4. Clic en **Guardar posiciones** (copia el `devices.js`) y **Exportar links.js** (copia el `links.js`), y pegá cada uno en su archivo.
@@ -116,8 +118,9 @@ En vez de escribir las coordenadas a mano, podés dibujar el plano desde la prop
 - [x] v0.4 — Editor de plano: dibujar habitaciones a click, imagen de fondo como guía, exportar `rooms.js`
 - [x] v0.5 — Importar el JSON del mapa de red de Zigbee2MQTT para crear dispositivos y enlaces (conservando posiciones)
 - [x] v0.6 — Sliders de tamaño de iconos y grosor de líneas; nombres de dispositivo al pasar el mouse
-- [ ] v0.7 — Zoom y pan
-- [ ] v0.8 — Exportar a SVG / PNG
+- [x] v0.7 — Enlaces principales (árbol padre-hijo) vs secundarios (vecinos), con check para ocultar los secundarios
+- [ ] v0.8 — Zoom y pan
+- [ ] v0.9 — Exportar a SVG / PNG
 - [ ] v1.0 — Estadísticas de red, alertas de LQI bajo, sugerencias de ubicación de routers
 
 ## Contribuir

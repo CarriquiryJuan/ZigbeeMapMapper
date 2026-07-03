@@ -32,6 +32,16 @@ let linksDirty = false;
 let iconScale = 0.7; // multiplicador del tamaño de los iconos
 let linkWidth = 1.2; // grosor de las líneas de enlace
 
+// Checkbox -> selector de lo que muestra/oculta.
+const TOGGLES = {
+  "toggle-routers": ".device-router",
+  "toggle-sensors": ".device-battery, .device-coordinator",
+  "toggle-links": "#layer-links",
+  "toggle-secondary": "#layer-links .secondary",
+  "toggle-names": ".room-label",
+  "toggle-lqi": ".lqi-label",
+};
+
 // --- Estado del editor de plano ---
 let editMode = false;
 let editPoints = []; // vértices [x, y] del polígono en construcción
@@ -161,6 +171,13 @@ function renderLinks(svg, devices, links) {
     const to = devices[link.to];
     if (!from || !to) continue;
 
+    // Un enlace es secundario solo si primary === false (los datos viejos sin
+    // el campo se tratan como principales para no ocultarlos por sorpresa).
+    const secondary = link.primary === false;
+    const edge = svgEl("g", {
+      class: secondary ? "link-edge secondary" : "link-edge",
+    });
+
     const line = svgEl("line", {
       x1: from.x,
       y1: from.y,
@@ -171,8 +188,8 @@ function renderLinks(svg, devices, links) {
       "stroke-linecap": "round",
     });
     line.appendChild(svgEl("title", {})).textContent =
-      `${link.from} -> ${link.to} (LQI ${link.lqi})`;
-    group.appendChild(line);
+      `${link.from} -> ${link.to} (LQI ${link.lqi})${secondary ? " · secundario" : ""}`;
+    edge.appendChild(line);
 
     const midX = (from.x + to.x) / 2;
     const midY = (from.y + to.y) / 2;
@@ -183,8 +200,9 @@ function renderLinks(svg, devices, links) {
       class: "lqi-label",
     });
     label.textContent = link.lqi;
-    group.appendChild(label);
+    edge.appendChild(label);
 
+    group.appendChild(edge);
     linkRefs.push({ link, line, label });
   }
   svg.appendChild(group);
@@ -620,6 +638,7 @@ function renderMap() {
   svg.appendChild(svgEl("g", { id: "editor-layer" }));
   renderVertexHandles();
   updateEditorLayer();
+  applyAllToggles();
 }
 
 // ---------- Exportar código fuente ----------
@@ -656,10 +675,11 @@ function exportRoomsSource() {
 function exportLinksSource() {
   const lines = ["const links = ["];
   for (const l of links) {
+    const primary = l.primary === false ? ", primary: false" : "";
     lines.push(
       `  { from: ${JSON.stringify(l.from)}, to: ${JSON.stringify(
         l.to
-      )}, lqi: ${l.lqi} },`
+      )}, lqi: ${l.lqi}${primary} },`
     );
   }
   lines.push("];");
@@ -755,9 +775,18 @@ function importZ2M(json) {
     const to = idByIeee[t];
     // lqi 0 = vecino sin medición válida; se descarta para no ensuciar el mapa.
     if (!from || !to || from === to || lqi == null || lqi <= 0) continue;
+    // relationship: 0 = el vecino es padre, 1 = hijo (ambos = árbol/principal),
+    // 2 = hermano (vecino/secundario). Un par es principal si en algún sentido
+    // se ve como padre-hijo.
+    const isTree = l.relationship === 0 || l.relationship === 1;
     const key = [from, to].sort().join("|");
     const prev = pairMap.get(key);
-    if (!prev || lqi > prev.lqi) pairMap.set(key, { from, to, lqi });
+    if (!prev) {
+      pairMap.set(key, { from, to, lqi, primary: isTree });
+    } else {
+      if (lqi > prev.lqi) prev.lqi = lqi;
+      if (isTree) prev.primary = true;
+    }
   }
 
   // Aplicar: mutamos los objetos const existentes (devices/links).
@@ -965,22 +994,24 @@ function setupViewControls() {
   }
 }
 
-function setupToggles() {
-  const toggles = {
-    "toggle-routers": ".device-router",
-    "toggle-sensors": ".device-battery, .device-coordinator",
-    "toggle-links": "#layer-links",
-    "toggle-names": ".room-label",
-    "toggle-lqi": ".lqi-label",
-  };
+function applyToggle(id) {
+  const checkbox = document.getElementById(id);
+  const selector = TOGGLES[id];
+  if (!checkbox || !selector) return;
+  document.querySelectorAll(selector).forEach((el) => {
+    el.style.display = checkbox.checked ? "" : "none";
+  });
+}
 
-  for (const [checkboxId, selector] of Object.entries(toggles)) {
-    const checkbox = document.getElementById(checkboxId);
-    if (!checkbox) continue;
-    checkbox.addEventListener("change", () => {
-      document.querySelectorAll(selector).forEach((el) => {
-        el.style.display = checkbox.checked ? "" : "none";
-      });
-    });
-  }
+// Re-aplica el estado de todos los checkboxes. Se llama al final de renderMap()
+// para que los toggles sigan valiendo después de re-renderizar (import, etc.).
+function applyAllToggles() {
+  Object.keys(TOGGLES).forEach(applyToggle);
+}
+
+function setupToggles() {
+  Object.keys(TOGGLES).forEach((id) => {
+    const checkbox = document.getElementById(id);
+    if (checkbox) checkbox.addEventListener("change", () => applyToggle(id));
+  });
 }
