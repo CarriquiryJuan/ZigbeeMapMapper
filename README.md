@@ -1,6 +1,6 @@
 # Zigbee House Map
 
-![status](https://img.shields.io/badge/version-0.7-blue)
+![status](https://img.shields.io/badge/version-0.8-blue)
 
 🇬🇧 **[English](#english)** · 🇪🇸 **[Español](#español)**
 
@@ -24,6 +24,7 @@ Un visualizador de redes Zigbee (Zigbee2MQTT / Home Assistant) sobre el plano re
 - Distinguishes **primary links** (the parent-child tree of the network) from **secondary** ones (neighbours / backup routes), which you can hide with a checkbox to keep the map readable.
 - Because routers see each other as *neighbours* (secondary), the pure parent-child tree splits into pieces; **"Complete tree"** reconnects the floating groups through their best link (inferred edges), and an **orange ring** flags devices that had no link at all in the scan (asleep — rescan them).
 - **Saves changes straight to the file** (`devices.js` / `rooms.js` / `links.js`) — no copy-paste.
+- **Zoom** (mouse wheel) and **pan** (drag the background), a **collapsible** sidebar and a **draggable divider** to resize the map area.
 
 ### How to use it
 
@@ -84,8 +85,8 @@ The response arrives on `zigbee2mqtt/bridge/response/networkmap`. Copy that whol
 - [x] v0.4 — Floor-plan editor: draw rooms, background image, export `rooms.js`
 - [x] v0.5 — Import the Zigbee2MQTT network map to create devices and links
 - [x] v0.6 — Icon-size and line-width sliders; device names on hover
-- [x] v0.7 — Primary vs secondary links; isolated highlight and inferred parent; save straight to file; collapsible sidebar
-- [ ] v0.8 — Zoom and pan
+- [x] v0.7 — Primary vs secondary links; complete-tree reconnection; save straight to file; collapsible sidebar
+- [x] v0.8 — Zoom, pan and a resizable map panel
 - [ ] v0.9 — Export to SVG / PNG
 - [ ] v1.0 — Network stats, low-LQI alerts, router-placement suggestions
 
@@ -113,6 +114,7 @@ MIT — see [LICENSE](LICENSE).
 - Distingue **enlaces principales** (el árbol padre-hijo de la red) de los **secundarios** (vecinos/rutas de respaldo), que podés ocultar con un check para dejar el mapa legible.
 - Como los routers se ven entre sí como *vecinos* (secundario), el árbol padre-hijo puro queda partido en pedazos; **"Completar árbol"** reconecta los grupos sueltos por su mejor enlace (enlaces inferidos), y un **aro naranja** marca los dispositivos que no tuvieron ningún enlace en el escaneo (dormidos — reescanealos).
 - **Guarda los cambios directo en el archivo** (`devices.js` / `rooms.js` / `links.js`) — sin copiar y pegar.
+- **Zoom** (rueda del mouse) y **pan** (arrastrar el fondo), sidebar **colapsable** y **divisor arrastrable** para redimensionar el área del mapa.
 
 ### Cómo usarlo
 
@@ -173,8 +175,8 @@ La respuesta llega a `zigbee2mqtt/bridge/response/networkmap`. Copiá todo ese J
 - [x] v0.4 — Editor de plano: dibujar habitaciones, imagen de fondo, exportar `rooms.js`
 - [x] v0.5 — Importar el mapa de red de Zigbee2MQTT para crear dispositivos y enlaces
 - [x] v0.6 — Sliders de tamaño de iconos y grosor de líneas; nombres al pasar el mouse
-- [x] v0.7 — Enlaces principales vs secundarios; resaltado de aislados y padre inferido; guardado directo al archivo; sidebar colapsable
-- [ ] v0.8 — Zoom y pan
+- [x] v0.7 — Enlaces principales vs secundarios; reconexión de grupos sueltos; guardado directo al archivo; sidebar colapsable
+- [x] v0.8 — Zoom, pan y panel del mapa redimensionable
 - [ ] v0.9 — Exportar a SVG / PNG
 - [ ] v1.0 — Estadísticas de red, alertas de LQI bajo, sugerencias de ubicación de routers
 

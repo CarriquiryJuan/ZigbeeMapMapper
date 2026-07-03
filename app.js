@@ -32,6 +32,7 @@ let linksDirty = false;
 let iconScale = 0.7; // multiplicador del tamaño de los iconos
 let linkWidth = 1.2; // grosor de las líneas de enlace
 let connectIsolated = true; // completar el árbol conectando los grupos sueltos
+let viewTransform = { scale: 1, tx: 0, ty: 0 }; // zoom/pan del mapa
 
 // Recalculados en cada render por computeTreeInfo().
 let inferredKeys = new Set(); // pares "a|b" promovidos para unir grupos
@@ -282,7 +283,19 @@ function renderDevices(svg, devices) {
   svg.appendChild(group);
 }
 
+// Punto del evento en coordenadas de DATOS (dentro del #viewport, ya con el
+// zoom/pan aplicado). Se usa para arrastrar dispositivos, vértices y dibujar.
 function toSvgPoint(svg, evt) {
+  const vp = document.getElementById("viewport") || svg;
+  const pt = svg.createSVGPoint();
+  pt.x = evt.clientX;
+  pt.y = evt.clientY;
+  return pt.matrixTransform(vp.getScreenCTM().inverse());
+}
+
+// Punto del evento en coordenadas del viewBox del SVG (sin el transform del
+// viewport). Se usa para calcular el pan y el zoom.
+function toViewBoxPoint(svg, evt) {
   const pt = svg.createSVGPoint();
   pt.x = evt.clientX;
   pt.y = evt.clientY;
@@ -713,15 +726,32 @@ function renderMap() {
     } ${bounds.maxY - bounds.minY + padding * 2}`
   );
 
-  renderBackground(svg);
-  renderRooms(svg, rooms);
-  renderLinks(svg, devices, links);
-  renderDevices(svg, devices);
-  svg.appendChild(svgEl("g", { id: "vertex-handles" }));
-  svg.appendChild(svgEl("g", { id: "editor-layer" }));
+  // Todo el contenido va dentro de #viewport, que lleva el transform de zoom/pan.
+  const viewport = svgEl("g", { id: "viewport" });
+  svg.appendChild(viewport);
+
+  renderBackground(viewport);
+  renderRooms(viewport, rooms);
+  renderLinks(viewport, devices, links);
+  renderDevices(viewport, devices);
+  viewport.appendChild(svgEl("g", { id: "vertex-handles" }));
+  viewport.appendChild(svgEl("g", { id: "editor-layer" }));
   renderVertexHandles();
   updateEditorLayer();
   applyAllToggles();
+  applyViewTransform();
+}
+
+function applyViewTransform() {
+  const vp = document.getElementById("viewport");
+  if (!vp) return;
+  const { scale, tx, ty } = viewTransform;
+  vp.setAttribute("transform", `translate(${tx} ${ty}) scale(${scale})`);
+}
+
+function resetView() {
+  viewTransform = { scale: 1, tx: 0, ty: 0 };
+  applyViewTransform();
 }
 
 // ---------- Exportar código fuente ----------
@@ -1064,6 +1094,8 @@ setupEditor();
 setupImport();
 setupViewControls();
 setupSidebarToggle();
+setupZoomPan();
+setupResizer();
 
 function setupSidebarToggle() {
   const btn = document.getElementById("toggle-sidebar");
@@ -1071,6 +1103,91 @@ function setupSidebarToggle() {
   btn.addEventListener("click", () => {
     document.body.classList.toggle("sidebar-collapsed");
   });
+}
+
+// ---------- Zoom y pan ----------
+
+function setupZoomPan() {
+  const svg = document.getElementById("map");
+  if (!svg) return;
+
+  svg.addEventListener(
+    "wheel",
+    (evt) => {
+      evt.preventDefault();
+      const p = toViewBoxPoint(svg, evt); // coords viewBox bajo el cursor
+      const factor = evt.deltaY < 0 ? 1.1 : 1 / 1.1;
+      const newScale = Math.min(Math.max(viewTransform.scale * factor, 0.2), 10);
+      const f = newScale / viewTransform.scale;
+      // Mantener fijo el punto bajo el cursor al hacer zoom.
+      viewTransform.tx = p.x - f * (p.x - viewTransform.tx);
+      viewTransform.ty = p.y - f * (p.y - viewTransform.ty);
+      viewTransform.scale = newScale;
+      applyViewTransform();
+    },
+    { passive: false }
+  );
+
+  let panning = false;
+  let panStart = null;
+  let tStart = null;
+
+  svg.addEventListener("pointerdown", (evt) => {
+    if (editMode) return; // en modo edición el click dibuja
+    if (evt.target.closest(".device") || evt.target.closest(".vertex-handle")) return;
+    panning = true;
+    panStart = toViewBoxPoint(svg, evt);
+    tStart = { tx: viewTransform.tx, ty: viewTransform.ty };
+    svg.setPointerCapture(evt.pointerId);
+    svg.classList.add("panning");
+  });
+
+  svg.addEventListener("pointermove", (evt) => {
+    if (!panning) return;
+    const p = toViewBoxPoint(svg, evt);
+    viewTransform.tx = tStart.tx + (p.x - panStart.x);
+    viewTransform.ty = tStart.ty + (p.y - panStart.y);
+    applyViewTransform();
+  });
+
+  const endPan = (evt) => {
+    if (!panning) return;
+    panning = false;
+    svg.classList.remove("panning");
+    if (svg.hasPointerCapture(evt.pointerId)) svg.releasePointerCapture(evt.pointerId);
+  };
+  svg.addEventListener("pointerup", endPan);
+  svg.addEventListener("pointercancel", endPan);
+
+  const resetBtn = document.getElementById("btn-reset-view");
+  if (resetBtn) resetBtn.addEventListener("click", resetView);
+}
+
+// ---------- Divisor redimensionable (ancho del panel del mapa) ----------
+
+function setupResizer() {
+  const resizer = document.getElementById("sidebar-resizer");
+  const sidebar = document.querySelector(".sidebar");
+  if (!resizer || !sidebar) return;
+
+  let resizing = false;
+  resizer.addEventListener("pointerdown", (evt) => {
+    resizing = true;
+    resizer.setPointerCapture(evt.pointerId);
+    document.body.classList.add("resizing");
+  });
+  resizer.addEventListener("pointermove", (evt) => {
+    if (!resizing) return;
+    const w = Math.min(Math.max(evt.clientX, 180), 640);
+    sidebar.style.width = `${w}px`;
+  });
+  const end = (evt) => {
+    resizing = false;
+    document.body.classList.remove("resizing");
+    if (resizer.hasPointerCapture(evt.pointerId)) resizer.releasePointerCapture(evt.pointerId);
+  };
+  resizer.addEventListener("pointerup", end);
+  resizer.addEventListener("pointercancel", end);
 }
 
 function setupViewControls() {
