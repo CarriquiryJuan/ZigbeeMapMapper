@@ -6,6 +6,13 @@ const DEVICE_STYLE = {
   battery: { shape: "circle", r: 10, fill: "#2196f3", stroke: "#0d47a1" },
 };
 
+// Enlaces que tocan cada dispositivo, para reposicionarlos durante el drag
+// sin tener que re-renderizar todo el SVG. Se llena en renderLinks().
+let linkRefs = [];
+// Elementos SVG (shape + label) de cada dispositivo, para reposicionarlos.
+let deviceEls = {};
+let dirty = false;
+
 function lqiColor(lqi) {
   if (lqi >= 200) return "#2e7d32"; // verde
   if (lqi >= 150) return "#1565c0"; // azul
@@ -69,6 +76,7 @@ function renderRooms(svg, rooms) {
 
 function renderLinks(svg, devices, links) {
   const group = svgEl("g", { id: "layer-links" });
+  linkRefs = [];
   for (const link of links) {
     const from = devices[link.from];
     const to = devices[link.to];
@@ -97,12 +105,15 @@ function renderLinks(svg, devices, links) {
     });
     label.textContent = link.lqi;
     group.appendChild(label);
+
+    linkRefs.push({ link, line, label });
   }
   svg.appendChild(group);
 }
 
 function renderDevices(svg, devices) {
   const group = svgEl("g", { id: "layer-devices" });
+  deviceEls = {};
   for (const [id, device] of Object.entries(devices)) {
     const style = DEVICE_STYLE[device.type] || DEVICE_STYLE.router;
     const devGroup = svgEl("g", {
@@ -145,8 +156,85 @@ function renderDevices(svg, devices) {
     devGroup.appendChild(label);
 
     group.appendChild(devGroup);
+    deviceEls[id] = { group: devGroup, shape, label, style };
+    makeDraggable(devGroup, id);
   }
   svg.appendChild(group);
+}
+
+function toSvgPoint(svg, evt) {
+  const pt = svg.createSVGPoint();
+  pt.x = evt.clientX;
+  pt.y = evt.clientY;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
+}
+
+function updateDevicePosition(id) {
+  const device = devices[id];
+  const els = deviceEls[id];
+  if (!device || !els) return;
+
+  if (els.style.shape === "circle") {
+    els.shape.setAttribute("cx", device.x);
+    els.shape.setAttribute("cy", device.y);
+  } else {
+    els.shape.setAttribute("x", device.x - els.style.size / 2);
+    els.shape.setAttribute("y", device.y - els.style.size / 2);
+  }
+  els.label.setAttribute("x", device.x);
+  els.label.setAttribute("y", device.y + 26);
+
+  for (const ref of linkRefs) {
+    if (ref.link.from !== id && ref.link.to !== id) continue;
+    const from = devices[ref.link.from];
+    const to = devices[ref.link.to];
+    ref.line.setAttribute("x1", from.x);
+    ref.line.setAttribute("y1", from.y);
+    ref.line.setAttribute("x2", to.x);
+    ref.line.setAttribute("y2", to.y);
+    ref.label.setAttribute("x", (from.x + to.x) / 2);
+    ref.label.setAttribute("y", (from.y + to.y) / 2 - 6);
+  }
+}
+
+function markDirty() {
+  if (dirty) return;
+  dirty = true;
+  const btn = document.getElementById("btn-export");
+  if (btn) btn.classList.add("dirty");
+}
+
+function makeDraggable(devGroup, id) {
+  let offset = { x: 0, y: 0 };
+
+  devGroup.addEventListener("pointerdown", (evt) => {
+    evt.preventDefault();
+    devGroup.setPointerCapture(evt.pointerId);
+    const svg = document.getElementById("map");
+    const pt = toSvgPoint(svg, evt);
+    offset.x = pt.x - devices[id].x;
+    offset.y = pt.y - devices[id].y;
+    devGroup.classList.add("dragging");
+  });
+
+  devGroup.addEventListener("pointermove", (evt) => {
+    if (!devGroup.hasPointerCapture(evt.pointerId)) return;
+    const svg = document.getElementById("map");
+    const pt = toSvgPoint(svg, evt);
+    devices[id].x = Math.round(pt.x - offset.x);
+    devices[id].y = Math.round(pt.y - offset.y);
+    updateDevicePosition(id);
+    markDirty();
+  });
+
+  const endDrag = (evt) => {
+    if (devGroup.hasPointerCapture(evt.pointerId)) {
+      devGroup.releasePointerCapture(evt.pointerId);
+    }
+    devGroup.classList.remove("dragging");
+  };
+  devGroup.addEventListener("pointerup", endDrag);
+  devGroup.addEventListener("pointercancel", endDrag);
 }
 
 function renderMap() {
@@ -187,5 +275,47 @@ function setupToggles() {
   }
 }
 
+function exportDevicesSource() {
+  const lines = ["const devices = {"];
+  for (const [id, d] of Object.entries(devices)) {
+    lines.push(
+      `  ${id}: { name: ${JSON.stringify(d.name)}, type: ${JSON.stringify(
+        d.type
+      )}, room: ${JSON.stringify(d.room)}, x: ${Math.round(
+        d.x
+      )}, y: ${Math.round(d.y)} },`
+    );
+  }
+  lines.push("};");
+  return lines.join("\n");
+}
+
+function setupExport() {
+  const btn = document.getElementById("btn-export");
+  const output = document.getElementById("export-output");
+  if (!btn || !output) return;
+
+  btn.addEventListener("click", async () => {
+    const source = exportDevicesSource();
+    output.value = source;
+    output.classList.remove("hidden");
+    output.focus();
+    output.select();
+
+    try {
+      await navigator.clipboard.writeText(source);
+      btn.textContent = "Copiado ✓ (pegalo en devices.js)";
+    } catch {
+      btn.textContent = "Seleccionado abajo — Ctrl+C para copiar";
+    }
+    btn.classList.remove("dirty");
+    dirty = false;
+    setTimeout(() => {
+      btn.textContent = "Guardar posiciones";
+    }, 3000);
+  });
+}
+
 renderMap();
 setupToggles();
+setupExport();

@@ -110,6 +110,53 @@ header h1 {
   background: #c62828;
 }
 
+.hint {
+  font-size: 0.8rem;
+  color: #999;
+  line-height: 1.4;
+  margin: 0 0 10px;
+}
+
+.hint code {
+  color: #ccc;
+}
+
+#btn-export {
+  width: 100%;
+  padding: 8px 10px;
+  background: #333;
+  color: #eee;
+  border: 1px solid #555;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+#btn-export:hover {
+  background: #3d3d3d;
+}
+
+#btn-export.dirty {
+  border-color: #f5c518;
+  color: #f5c518;
+}
+
+#export-output {
+  width: 100%;
+  margin-top: 10px;
+  background: #111;
+  color: #9cdcfe;
+  border: 1px solid #444;
+  border-radius: 4px;
+  font-family: "Consolas", monospace;
+  font-size: 0.75rem;
+  resize: vertical;
+}
+
+#export-output.hidden {
+  display: none;
+}
+
 .map-container {
   flex: 1;
   overflow: auto;
@@ -120,6 +167,15 @@ header h1 {
   width: 100%;
   height: 100%;
   display: block;
+}
+
+.device {
+  cursor: grab;
+  touch-action: none;
+}
+
+.device.dragging {
+  cursor: grabbing;
 }
 
 .room-label {

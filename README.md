@@ -2,7 +2,7 @@
 
 Visualizador de redes Zigbee (Zigbee2MQTT / Home Assistant) sobre el plano real de tu casa. Sin instalar nada: es HTML + CSS + JS puro, se abre con doble clic en `index.html`.
 
-![status](https://img.shields.io/badge/version-0.2-blue)
+![status](https://img.shields.io/badge/version-0.3-blue)
 
 ## ¿Qué hace?
 
@@ -11,6 +11,7 @@ Visualizador de redes Zigbee (Zigbee2MQTT / Home Assistant) sobre el plano real 
 - Dibuja los enlaces entre dispositivos, coloreados según la calidad de señal (LQI).
 - Al pasar el mouse sobre un dispositivo o enlace, muestra su nombre y LQI.
 - Panel lateral para mostrar/ocultar routers, sensores, enlaces, nombres y valores de LQI.
+- Arrastrá cualquier dispositivo con el mouse: las líneas se recalculan solas. Los cambios viven solo en memoria — usá el botón "Guardar posiciones" para copiar el `devices.js` actualizado y pegarlo en el archivo.
 
 ## Cómo usarlo
 
@@ -69,7 +70,7 @@ Podés obtener los enlaces y el LQI real desde el mapa de red de Zigbee2MQTT (Se
 
 - [x] v0.1 — Plano + dispositivos + enlaces (estático)
 - [x] v0.2 — Datos reales separados en `*.example.js` (público) vs `rooms.js`/`devices.js`/`links.js` (privado, gitignored)
-- [ ] v0.3 — Arrastrar dispositivos con el mouse
+- [x] v0.3 — Arrastrar dispositivos con el mouse + botón para copiar el `devices.js` actualizado
 - [ ] v0.4 — Zoom y pan
 - [ ] v0.5 — Exportar a SVG / PNG
 - [ ] v1.0 — Importar directamente el JSON del mapa de red de Zigbee2MQTT, estadísticas de red, alertas de LQI bajo, sugerencias de ubicación de routers
