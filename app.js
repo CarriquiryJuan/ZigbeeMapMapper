@@ -26,6 +26,7 @@ let roomEls = [];
 let vertexInteraction = false;
 let devicesDirty = false;
 let roomsDirty = false;
+let linksDirty = false;
 
 // --- Estado del editor de plano ---
 let editMode = false;
@@ -281,6 +282,12 @@ function markDevicesDirty() {
 function markRoomsDirty() {
   roomsDirty = true;
   const btn = document.getElementById("btn-export-rooms");
+  if (btn) btn.classList.add("dirty");
+}
+
+function markLinksDirty() {
+  linksDirty = true;
+  const btn = document.getElementById("btn-export-links");
   if (btn) btn.classList.add("dirty");
 }
 
@@ -636,6 +643,134 @@ function exportRoomsSource() {
   return lines.join("\n");
 }
 
+function exportLinksSource() {
+  const lines = ["const links = ["];
+  for (const l of links) {
+    lines.push(
+      `  { from: ${JSON.stringify(l.from)}, to: ${JSON.stringify(
+        l.to
+      )}, lqi: ${l.lqi} },`
+    );
+  }
+  lines.push("];");
+  return lines.join("\n");
+}
+
+// ---------- Importar de Zigbee2MQTT ----------
+
+// Encuentra los arrays nodes/links dentro del JSON, sin importar cómo venga
+// envuelto (respuesta cruda del networkmap, {data:{value:{...}}}, etc.).
+function extractNodesLinks(json) {
+  const candidates = [
+    json,
+    json && json.value,
+    json && json.data,
+    json && json.data && json.data.value,
+    json && json.networkmap,
+  ];
+  for (const c of candidates) {
+    if (c && Array.isArray(c.nodes)) {
+      return { nodes: c.nodes, links: Array.isArray(c.links) ? c.links : [] };
+    }
+  }
+  // Fallback: lista de dispositivos (bridge/devices), sin enlaces.
+  if (Array.isArray(json)) return { nodes: json, links: [] };
+  if (json && Array.isArray(json.devices)) return { nodes: json.devices, links: [] };
+  return { nodes: null, links: null };
+}
+
+function mapZ2MType(type) {
+  const s = String(type || "").toLowerCase();
+  if (s.includes("coordinator")) return "coordinator";
+  if (s.includes("router")) return "router";
+  return "battery"; // EndDevice / desconocido
+}
+
+function importZ2M(json) {
+  const { nodes, links: rawLinks } = extractNodesLinks(json);
+  if (!nodes || nodes.length === 0) {
+    alert(
+      "No encontré 'nodes' en el JSON. Pegá la respuesta del networkmap de Zigbee2MQTT (type: raw) o la lista de bridge/devices."
+    );
+    return;
+  }
+
+  // Zona de "staging" para dispositivos nuevos: debajo del plano actual.
+  const bounds = computeBounds();
+  const stagingX = Math.round(bounds.minX);
+  const stagingY = Math.round(bounds.maxY + 60);
+  const COLS = 12;
+  const STEP = 55;
+  let placed = 0;
+
+  const newDevices = {};
+  const idByIeee = {};
+  let coordinatorSkipped = 0;
+
+  for (const node of nodes) {
+    const fname =
+      node.friendlyName ||
+      node.friendly_name ||
+      node.ieeeAddr ||
+      node.ieee_address ||
+      "device";
+    const ieee = node.ieeeAddr || node.ieee_address || fname;
+    const id = slugify(fname);
+    if (newDevices[id]) continue; // nombre duplicado
+    idByIeee[ieee] = id;
+
+    const type = mapZ2MType(node.type);
+    const existing = devices[id];
+    let x, y, room;
+    if (existing) {
+      x = existing.x;
+      y = existing.y;
+      room = existing.room;
+    } else {
+      x = stagingX + (placed % COLS) * STEP;
+      y = stagingY + Math.floor(placed / COLS) * STEP;
+      room = "";
+      placed++;
+    }
+    newDevices[id] = { name: fname, type, room, x, y };
+  }
+
+  // Enlaces: dedupe por par no ordenado, quedándose con el mayor LQI.
+  const pairMap = new Map();
+  for (const l of rawLinks || []) {
+    const s = l.sourceIeeeAddr || (l.source && l.source.ieeeAddr) || l.source;
+    const t = l.targetIeeeAddr || (l.target && l.target.ieeeAddr) || l.target;
+    const lqi = l.lqi != null ? l.lqi : l.linkquality != null ? l.linkquality : l.depth;
+    const from = idByIeee[s];
+    const to = idByIeee[t];
+    if (!from || !to || from === to || lqi == null) continue;
+    const key = [from, to].sort().join("|");
+    const prev = pairMap.get(key);
+    if (!prev || lqi > prev.lqi) pairMap.set(key, { from, to, lqi });
+  }
+
+  // Aplicar: mutamos los objetos const existentes (devices/links).
+  for (const k of Object.keys(devices)) delete devices[k];
+  Object.assign(devices, newDevices);
+  links.length = 0;
+  for (const v of pairMap.values()) links.push(v);
+
+  renderMap();
+  refreshRoomList();
+  markDevicesDirty();
+  markLinksDirty();
+
+  const nNew = placed;
+  const nKept = Object.keys(newDevices).length - nNew;
+  alert(
+    `Importado: ${Object.keys(newDevices).length} dispositivos ` +
+      `(${nKept} ya ubicados, ${nNew} nuevos en la zona de staging debajo del plano) ` +
+      `y ${links.length} enlaces.\n\n` +
+      `Arrastrá los dispositivos nuevos a su lugar y después usá ` +
+      `"Guardar posiciones" y "Exportar links.js".`
+  );
+}
+
 async function copyToOutput(outputId, btn, source, okLabel, resetLabel) {
   const output = document.getElementById(outputId);
   output.value = source;
@@ -680,6 +815,69 @@ function setupExport() {
         "Copiado ✓ (pegalo en rooms.js)",
         "Exportar rooms.js"
       );
+    });
+  }
+
+  const btnLinks = document.getElementById("btn-export-links");
+  if (btnLinks) {
+    btnLinks.addEventListener("click", () => {
+      linksDirty = false;
+      copyToOutput(
+        "links-output",
+        btnLinks,
+        exportLinksSource(),
+        "Copiado ✓ (pegalo en links.js)",
+        "Exportar links.js"
+      );
+    });
+  }
+}
+
+function parseAndImport(text) {
+  let json;
+  try {
+    json = JSON.parse(text);
+  } catch (e) {
+    alert("El texto no es un JSON válido:\n" + e.message);
+    return;
+  }
+  importZ2M(json);
+}
+
+function setupImport() {
+  const btn = document.getElementById("btn-import");
+  const text = document.getElementById("import-text");
+  if (btn && text) {
+    btn.addEventListener("click", () => {
+      const raw = text.value.trim();
+      if (!raw) {
+        alert("Pegá el JSON del networkmap de Zigbee2MQTT en el cuadro de texto (o cargá un archivo).");
+        return;
+      }
+      parseAndImport(raw);
+    });
+  }
+
+  const fileInput = document.getElementById("import-input");
+  if (fileInput) {
+    fileInput.addEventListener("change", (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (text) text.value = reader.result;
+        parseAndImport(String(reader.result).trim());
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  const helpToggle = document.getElementById("import-help-toggle");
+  const help = document.getElementById("import-help");
+  if (helpToggle && help) {
+    helpToggle.addEventListener("click", (e) => {
+      e.preventDefault();
+      help.classList.toggle("hidden");
     });
   }
 }
@@ -736,6 +934,7 @@ renderMap();
 setupToggles();
 setupExport();
 setupEditor();
+setupImport();
 
 function setupToggles() {
   const toggles = {

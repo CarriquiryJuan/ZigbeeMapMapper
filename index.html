@@ -33,10 +33,30 @@
         <li><span class="line lqi-bad"></span> LQI &lt; 80</li>
       </ul>
 
+      <h2>Importar de Zigbee2MQTT</h2>
+      <p class="hint">
+        Pegá el JSON del <strong>mapa de red</strong> de Zigbee2MQTT (formato <code>raw</code>) para generar
+        dispositivos y enlaces automáticamente. Los dispositivos que ya ubicaste conservan su posición;
+        los nuevos aparecen debajo del plano para que los arrastres.
+        <a href="#" id="import-help-toggle">¿Cómo lo obtengo?</a>
+      </p>
+      <div id="import-help" class="hint hidden">
+        En Home Assistant / MQTT publicá en el topic
+        <code>zigbee2mqtt/bridge/request/networkmap</code> el payload
+        <code>{"type":"raw","routes":false}</code> y copiá la respuesta que llega a
+        <code>zigbee2mqtt/bridge/response/networkmap</code>. También sirve la lista de
+        <code>zigbee2mqtt/bridge/devices</code> (crea solo dispositivos, sin enlaces).
+      </div>
+      <textarea id="import-text" rows="5" placeholder="Pegá el JSON acá…"></textarea>
+      <input type="file" id="import-input" accept="application/json,.json" />
+      <button id="btn-import">Importar</button>
+
       <h2>Guardar</h2>
-      <p class="hint">Arrastrá los dispositivos para reubicarlos. Los cambios son solo en memoria: usá este botón para copiar el nuevo <code>devices.js</code>.</p>
+      <p class="hint">Arrastrá los dispositivos para reubicarlos. Los cambios son solo en memoria: usá estos botones para copiar los archivos actualizados.</p>
       <button id="btn-export">Guardar posiciones</button>
       <textarea id="export-output" class="hidden" readonly rows="10"></textarea>
+      <button id="btn-export-links">Exportar links.js</button>
+      <textarea id="links-output" class="hidden" readonly rows="10"></textarea>
 
       <h2>Plano</h2>
       <button id="btn-edit-plan">✏️ Editar plano</button>

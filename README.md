@@ -2,7 +2,7 @@
 
 Visualizador de redes Zigbee (Zigbee2MQTT / Home Assistant) sobre el plano real de tu casa. Sin instalar nada: es HTML + CSS + JS puro, se abre con doble clic en `index.html`.
 
-![status](https://img.shields.io/badge/version-0.4-blue)
+![status](https://img.shields.io/badge/version-0.5-blue)
 
 ## ¿Qué hace?
 
@@ -13,6 +13,7 @@ Visualizador de redes Zigbee (Zigbee2MQTT / Home Assistant) sobre el plano real 
 - Panel lateral para mostrar/ocultar routers, sensores, enlaces, nombres y valores de LQI.
 - Arrastrá cualquier dispositivo con el mouse: las líneas se recalculan solas. Los cambios viven solo en memoria — usá el botón "Guardar posiciones" para copiar el `devices.js` actualizado y pegarlo en el archivo.
 - **Editor de plano** integrado: dibujá habitaciones a click, cargá tu plano como imagen de fondo para calcar encima, borrá habitaciones y exportá el `rooms.js` actualizado (ver abajo).
+- **Importá el mapa de red de Zigbee2MQTT** (JSON) y la app crea los dispositivos y enlaces sola, conservando las posiciones que ya definiste (ver abajo).
 
 ## Cómo usarlo
 
@@ -65,7 +66,34 @@ Cada enlace conecta dos IDs de `devices.js` con su LQI (Link Quality Indicator).
 { from: "coordinator", to: "switch_estar", lqi: 235 }
 ```
 
-Podés obtener los enlaces y el LQI real desde el mapa de red de Zigbee2MQTT (Settings → Network map → JSON/Raw).
+En vez de escribirlos a mano, podés generarlos automáticamente importando el mapa de red de Zigbee2MQTT (ver abajo).
+
+## Importar de Zigbee2MQTT
+
+La app puede crear los dispositivos y los enlaces automáticamente a partir del **mapa de red** de Zigbee2MQTT.
+
+### Cómo obtener el JSON
+
+Publicá por MQTT (por ejemplo desde Home Assistant → Herramientas para desarrolladores → MQTT, o con MQTT Explorer):
+
+- **Topic:** `zigbee2mqtt/bridge/request/networkmap`
+- **Payload:** `{"type":"raw","routes":false}`
+
+La respuesta llega al topic `zigbee2mqtt/bridge/response/networkmap`. Copiá todo ese JSON.
+
+> Alternativa: la lista de `zigbee2mqtt/bridge/devices` también sirve, pero solo crea dispositivos (sin enlaces ni LQI).
+
+### Importarlo
+
+1. En el panel lateral, **Importar de Zigbee2MQTT**, pegá el JSON en el cuadro de texto (o cargá un archivo `.json`).
+2. Clic en **Importar**. La app:
+   - crea un dispositivo por cada nodo (mapeando el tipo: Coordinator → coordinador, Router → router, EndDevice → sensor a pila);
+   - crea los enlaces con su LQI, quedándose con el mejor valor cuando el enlace aparece en ambos sentidos;
+   - **conserva la posición** de los dispositivos que ya tenías ubicados (los reconoce por el nombre), y coloca los nuevos en una zona de *staging* debajo del plano.
+3. Arrastrá los dispositivos nuevos a su lugar en el plano.
+4. Clic en **Guardar posiciones** (copia el `devices.js`) y **Exportar links.js** (copia el `links.js`), y pegá cada uno en su archivo.
+
+> El id de cada dispositivo se deriva de su *friendly name* de Zigbee2MQTT. Mientras no cambies esos nombres, cada nueva importación va a reconocer los dispositivos y respetar dónde los pusiste — así podés reimportar cuando cambie tu red sin rehacer el plano.
 
 ## Editor de plano (dibujar habitaciones)
 
@@ -86,9 +114,10 @@ En vez de escribir las coordenadas a mano, podés dibujar el plano desde la prop
 - [x] v0.2 — Datos reales separados en `*.example.js` (público) vs `rooms.js`/`devices.js`/`links.js` (privado, gitignored)
 - [x] v0.3 — Arrastrar dispositivos con el mouse + botón para copiar el `devices.js` actualizado
 - [x] v0.4 — Editor de plano: dibujar habitaciones a click, imagen de fondo como guía, exportar `rooms.js`
-- [ ] v0.5 — Zoom y pan
-- [ ] v0.6 — Exportar a SVG / PNG
-- [ ] v1.0 — Importar directamente el JSON del mapa de red de Zigbee2MQTT, estadísticas de red, alertas de LQI bajo, sugerencias de ubicación de routers
+- [x] v0.5 — Importar el JSON del mapa de red de Zigbee2MQTT para crear dispositivos y enlaces (conservando posiciones)
+- [ ] v0.6 — Zoom y pan
+- [ ] v0.7 — Exportar a SVG / PNG
+- [ ] v1.0 — Estadísticas de red, alertas de LQI bajo, sugerencias de ubicación de routers
 
 ## Contribuir
 
