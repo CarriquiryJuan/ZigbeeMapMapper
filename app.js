@@ -18,6 +18,12 @@ const ROOM_PALETTE = [
 let linkRefs = [];
 // Elementos SVG (shape + label) de cada dispositivo, para reposicionarlos.
 let deviceEls = {};
+// Elementos SVG (polygon + label) de cada habitación, para reformarlas en vivo
+// al arrastrar sus vértices. Índices paralelos al array `rooms`.
+let roomEls = [];
+// Se pone en true mientras se arrastra/toca un vértice, para que el click
+// resultante no agregue un punto nuevo al polígono en construcción.
+let vertexInteraction = false;
 let devicesDirty = false;
 let roomsDirty = false;
 
@@ -104,6 +110,7 @@ function renderBackground(svg) {
 
 function renderRooms(svg, rooms) {
   const group = svgEl("g", { id: "layer-rooms" });
+  roomEls = [];
   for (const room of rooms) {
     const points = room.polygon.map((p) => p.join(",")).join(" ");
     const poly = svgEl("polygon", {
@@ -125,8 +132,20 @@ function renderRooms(svg, rooms) {
     });
     label.textContent = room.name;
     group.appendChild(label);
+
+    roomEls.push({ poly, label });
   }
   svg.appendChild(group);
+}
+
+function updateRoomGeometry(ri) {
+  const room = rooms[ri];
+  const els = roomEls[ri];
+  if (!room || !els) return;
+  els.poly.setAttribute("points", room.polygon.map((p) => p.join(",")).join(" "));
+  const { x, y } = polygonCentroid(room.polygon);
+  els.label.setAttribute("x", x);
+  els.label.setAttribute("y", y);
 }
 
 function renderLinks(svg, devices, links) {
@@ -341,8 +360,79 @@ function updateEditorLayer(cursor) {
   }
 }
 
+function renderVertexHandles() {
+  const layer = document.getElementById("vertex-handles");
+  if (!layer) return;
+  layer.innerHTML = "";
+  if (!editMode) return;
+  rooms.forEach((room, ri) => {
+    room.polygon.forEach((pt, pi) => {
+      const handle = svgEl("circle", {
+        cx: pt[0],
+        cy: pt[1],
+        r: 5,
+        class: "vertex-handle",
+      });
+      const title = svgEl("title", {});
+      title.textContent = `${room.name} · vértice ${pi + 1} (arrastrar para mover, click derecho para borrar)`;
+      handle.appendChild(title);
+      makeVertexDraggable(handle, ri, pi);
+      layer.appendChild(handle);
+    });
+  });
+}
+
+function makeVertexDraggable(handle, ri, pi) {
+  handle.addEventListener("pointerdown", (evt) => {
+    evt.preventDefault();
+    vertexInteraction = true;
+    handle.setPointerCapture(evt.pointerId);
+    handle.classList.add("dragging");
+  });
+
+  handle.addEventListener("pointermove", (evt) => {
+    if (!handle.hasPointerCapture(evt.pointerId)) return;
+    const svg = document.getElementById("map");
+    const p = toSvgPoint(svg, evt);
+    rooms[ri].polygon[pi] = [Math.round(p.x), Math.round(p.y)];
+    handle.setAttribute("cx", rooms[ri].polygon[pi][0]);
+    handle.setAttribute("cy", rooms[ri].polygon[pi][1]);
+    updateRoomGeometry(ri);
+    markRoomsDirty();
+  });
+
+  const endDrag = (evt) => {
+    if (handle.hasPointerCapture(evt.pointerId)) {
+      handle.releasePointerCapture(evt.pointerId);
+    }
+    handle.classList.remove("dragging");
+    // Se resetea tras el click que dispara el pointerup, para no agregar punto.
+    setTimeout(() => {
+      vertexInteraction = false;
+    }, 0);
+  };
+  handle.addEventListener("pointerup", endDrag);
+  handle.addEventListener("pointercancel", endDrag);
+
+  handle.addEventListener("contextmenu", (evt) => {
+    evt.preventDefault();
+    if (rooms[ri].polygon.length <= 3) {
+      alert("Una habitación necesita al menos 3 vértices.");
+      return;
+    }
+    rooms[ri].polygon.splice(pi, 1);
+    renderMap();
+    markRoomsDirty();
+  });
+}
+
 function onEditClick(evt) {
   if (!editMode) return;
+  if (vertexInteraction) {
+    // El click viene de soltar un vértice: no agregar punto nuevo.
+    vertexInteraction = false;
+    return;
+  }
   const svg = document.getElementById("map");
   const pt = toSvgPoint(svg, evt);
   editPoints.push([Math.round(pt.x), Math.round(pt.y)]);
@@ -417,7 +507,7 @@ function toggleEditMode() {
     btn.textContent = editMode ? "✏️ Editando plano — salir" : "✏️ Editar plano";
   }
   if (!editMode) editPoints = [];
-  updateEditorLayer();
+  renderMap();
   refreshRoomList();
 }
 
@@ -509,7 +599,9 @@ function renderMap() {
   renderRooms(svg, rooms);
   renderLinks(svg, devices, links);
   renderDevices(svg, devices);
+  svg.appendChild(svgEl("g", { id: "vertex-handles" }));
   svg.appendChild(svgEl("g", { id: "editor-layer" }));
+  renderVertexHandles();
   updateEditorLayer();
 }
 

@@ -309,6 +309,24 @@ header h1 {
   pointer-events: none;
 }
 
+.vertex-handle {
+  fill: #fff;
+  stroke: #1565c0;
+  stroke-width: 2;
+  cursor: grab;
+  touch-action: none;
+}
+
+.vertex-handle:hover {
+  fill: #f5c518;
+  r: 7;
+}
+
+.vertex-handle.dragging {
+  cursor: grabbing;
+  fill: #f5c518;
+}
+
 .map-container {
   flex: 1;
   overflow: auto;
