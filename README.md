@@ -2,7 +2,7 @@
 
 Visualizador de redes Zigbee (Zigbee2MQTT / Home Assistant) sobre el plano real de tu casa. Sin instalar nada: es HTML + CSS + JS puro, se abre con doble clic en `index.html`.
 
-![status](https://img.shields.io/badge/version-0.1-blue)
+![status](https://img.shields.io/badge/version-0.2-blue)
 
 ## ¿Qué hace?
 
@@ -15,8 +15,16 @@ Visualizador de redes Zigbee (Zigbee2MQTT / Home Assistant) sobre el plano real 
 ## Cómo usarlo
 
 1. Cloná o descargá este repositorio.
-2. Abrí `index.html` en el navegador (doble clic alcanza).
-3. Editá `rooms.js`, `devices.js` y `links.js` con los datos de tu casa (ver abajo).
+2. Copiá los archivos de ejemplo a los archivos "reales" que usa la app:
+   ```
+   cp rooms.example.js rooms.js
+   cp devices.example.js devices.js
+   cp links.example.js links.js
+   ```
+3. Editá esos `rooms.js`, `devices.js` y `links.js` con los datos de tu propia casa (ver abajo).
+4. Abrí `index.html` en el navegador (doble clic alcanza).
+
+> **Privacidad:** `rooms.js`, `devices.js` y `links.js` están en `.gitignore` a propósito. El plano de tu casa y tus dispositivos son datos privados — si hacés fork o subís cambios, esos archivos nunca se van a versionar ni pushear por accidente. Solo los `*.example.js` (genéricos) quedan en el repo público.
 
 ## Cómo personalizarlo con tu propia casa
 
@@ -60,9 +68,10 @@ Podés obtener los enlaces y el LQI real desde el mapa de red de Zigbee2MQTT (Se
 ## Roadmap
 
 - [x] v0.1 — Plano + dispositivos + enlaces (estático)
-- [ ] v0.2 — Arrastrar dispositivos con el mouse
-- [ ] v0.3 — Zoom y pan
-- [ ] v0.4 — Exportar a SVG / PNG
+- [x] v0.2 — Datos reales separados en `*.example.js` (público) vs `rooms.js`/`devices.js`/`links.js` (privado, gitignored)
+- [ ] v0.3 — Arrastrar dispositivos con el mouse
+- [ ] v0.4 — Zoom y pan
+- [ ] v0.5 — Exportar a SVG / PNG
 - [ ] v1.0 — Importar directamente el JSON del mapa de red de Zigbee2MQTT, estadísticas de red, alertas de LQI bajo, sugerencias de ubicación de routers
 
 ## Contribuir
