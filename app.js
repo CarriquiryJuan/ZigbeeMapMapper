@@ -28,6 +28,10 @@ let devicesDirty = false;
 let roomsDirty = false;
 let linksDirty = false;
 
+// Ajustes de visualización (no se exportan, son solo de la vista).
+let iconScale = 0.7; // multiplicador del tamaño de los iconos
+let linkWidth = 1.2; // grosor de las líneas de enlace
+
 // --- Estado del editor de plano ---
 let editMode = false;
 let editPoints = []; // vértices [x, y] del polígono en construcción
@@ -163,7 +167,7 @@ function renderLinks(svg, devices, links) {
       x2: to.x,
       y2: to.y,
       stroke: lqiColor(link.lqi),
-      "stroke-width": "3",
+      "stroke-width": linkWidth,
       "stroke-linecap": "round",
     });
     line.appendChild(svgEl("title", {})).textContent =
@@ -196,22 +200,28 @@ function renderDevices(svg, devices) {
       "data-id": id,
     });
 
+    const isCircle = style.shape === "circle";
+    const r = isCircle ? style.r * iconScale : 0;
+    const size = isCircle ? 0 : style.size * iconScale;
+    const half = isCircle ? r : size / 2;
+    const labelDy = half + 12;
+
     let shape;
-    if (style.shape === "circle") {
+    if (isCircle) {
       shape = svgEl("circle", {
         cx: device.x,
         cy: device.y,
-        r: style.r,
+        r,
         fill: style.fill,
         stroke: style.stroke,
         "stroke-width": "2",
       });
     } else {
       shape = svgEl("rect", {
-        x: device.x - style.size / 2,
-        y: device.y - style.size / 2,
-        width: style.size,
-        height: style.size,
+        x: device.x - half,
+        y: device.y - half,
+        width: size,
+        height: size,
         fill: style.fill,
         stroke: style.stroke,
         "stroke-width": "2",
@@ -223,7 +233,7 @@ function renderDevices(svg, devices) {
 
     const label = svgEl("text", {
       x: device.x,
-      y: device.y + 26,
+      y: device.y + labelDy,
       "text-anchor": "middle",
       class: "device-label",
     });
@@ -231,7 +241,7 @@ function renderDevices(svg, devices) {
     devGroup.appendChild(label);
 
     group.appendChild(devGroup);
-    deviceEls[id] = { group: devGroup, shape, label, style };
+    deviceEls[id] = { group: devGroup, shape, label, style, isCircle, half, labelDy };
     makeDraggable(devGroup, id);
   }
   svg.appendChild(group);
@@ -249,15 +259,15 @@ function updateDevicePosition(id) {
   const els = deviceEls[id];
   if (!device || !els) return;
 
-  if (els.style.shape === "circle") {
+  if (els.isCircle) {
     els.shape.setAttribute("cx", device.x);
     els.shape.setAttribute("cy", device.y);
   } else {
-    els.shape.setAttribute("x", device.x - els.style.size / 2);
-    els.shape.setAttribute("y", device.y - els.style.size / 2);
+    els.shape.setAttribute("x", device.x - els.half);
+    els.shape.setAttribute("y", device.y - els.half);
   }
   els.label.setAttribute("x", device.x);
-  els.label.setAttribute("y", device.y + 26);
+  els.label.setAttribute("y", device.y + els.labelDy);
 
   for (const ref of linkRefs) {
     if (ref.link.from !== id && ref.link.to !== id) continue;
@@ -936,13 +946,31 @@ setupToggles();
 setupExport();
 setupEditor();
 setupImport();
+setupViewControls();
+
+function setupViewControls() {
+  const iconSlider = document.getElementById("icon-size");
+  if (iconSlider) {
+    iconSlider.addEventListener("input", (e) => {
+      iconScale = Number(e.target.value);
+      renderMap();
+    });
+  }
+  const linkSlider = document.getElementById("link-width");
+  if (linkSlider) {
+    linkSlider.addEventListener("input", (e) => {
+      linkWidth = Number(e.target.value);
+      renderMap();
+    });
+  }
+}
 
 function setupToggles() {
   const toggles = {
     "toggle-routers": ".device-router",
     "toggle-sensors": ".device-battery, .device-coordinator",
     "toggle-links": "#layer-links",
-    "toggle-names": ".device-label, .room-label",
+    "toggle-names": ".room-label",
     "toggle-lqi": ".lqi-label",
   };
 

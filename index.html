@@ -17,8 +17,17 @@
       <label><input type="checkbox" id="toggle-routers" checked /> Routers</label>
       <label><input type="checkbox" id="toggle-sensors" checked /> Sensores / Coordinador</label>
       <label><input type="checkbox" id="toggle-links" checked /> Enlaces</label>
-      <label><input type="checkbox" id="toggle-names" checked /> Nombres</label>
+      <label><input type="checkbox" id="toggle-names" checked /> Nombres de habitaciones</label>
       <label><input type="checkbox" id="toggle-lqi" checked /> LQI</label>
+      <p class="hint">El nombre de cada dispositivo aparece al pasar el mouse por encima.</p>
+
+      <h2>Visualización</h2>
+      <label class="slider-label">Tamaño de iconos
+        <input type="range" id="icon-size" min="0.3" max="1.5" step="0.05" value="0.7" />
+      </label>
+      <label class="slider-label">Grosor de líneas
+        <input type="range" id="link-width" min="0.5" max="4" step="0.1" value="1.2" />
+      </label>
 
       <h2>Leyenda</h2>
       <ul class="legend">

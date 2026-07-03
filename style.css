@@ -430,6 +430,17 @@ header h1 {
 .device-label {
   fill: #eee;
   font-size: 12px;
+  display: none;
+  pointer-events: none;
+}
+
+.device:hover .device-label {
+  display: block;
+}
+
+.device:hover {
+  /* el nodo activo queda por encima para que su nombre no lo tape otro */
+  filter: drop-shadow(0 0 2px #000);
 }
 
 .lqi-label {

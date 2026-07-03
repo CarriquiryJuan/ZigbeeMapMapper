@@ -2,7 +2,7 @@
 
 Visualizador de redes Zigbee (Zigbee2MQTT / Home Assistant) sobre el plano real de tu casa. Sin instalar nada: es HTML + CSS + JS puro, se abre con doble clic en `index.html`.
 
-![status](https://img.shields.io/badge/version-0.5-blue)
+![status](https://img.shields.io/badge/version-0.6-blue)
 
 ## ¿Qué hace?
 
@@ -10,7 +10,7 @@ Visualizador de redes Zigbee (Zigbee2MQTT / Home Assistant) sobre el plano real 
 - Ubica tus dispositivos Zigbee (coordinador, routers, sensores) en el plano.
 - Dibuja los enlaces entre dispositivos, coloreados según la calidad de señal (LQI).
 - Al pasar el mouse sobre un dispositivo o enlace, muestra su nombre y LQI.
-- Panel lateral para mostrar/ocultar routers, sensores, enlaces, nombres y valores de LQI.
+- Panel lateral para mostrar/ocultar routers, sensores, enlaces, nombres de habitaciones y valores de LQI, con sliders para el tamaño de los iconos y el grosor de las líneas. El nombre de cada dispositivo aparece al pasar el mouse por encima.
 - Arrastrá cualquier dispositivo con el mouse: las líneas se recalculan solas. Los cambios viven solo en memoria — usá el botón "Guardar posiciones" para copiar el `devices.js` actualizado y pegarlo en el archivo.
 - **Editor de plano** integrado: dibujá habitaciones a click, cargá tu plano como imagen de fondo para calcar encima, borrá habitaciones y exportá el `rooms.js` actualizado (ver abajo).
 - **Importá el mapa de red de Zigbee2MQTT** (JSON) y la app crea los dispositivos y enlaces sola, conservando las posiciones que ya definiste (ver abajo).
@@ -115,8 +115,9 @@ En vez de escribir las coordenadas a mano, podés dibujar el plano desde la prop
 - [x] v0.3 — Arrastrar dispositivos con el mouse + botón para copiar el `devices.js` actualizado
 - [x] v0.4 — Editor de plano: dibujar habitaciones a click, imagen de fondo como guía, exportar `rooms.js`
 - [x] v0.5 — Importar el JSON del mapa de red de Zigbee2MQTT para crear dispositivos y enlaces (conservando posiciones)
-- [ ] v0.6 — Zoom y pan
-- [ ] v0.7 — Exportar a SVG / PNG
+- [x] v0.6 — Sliders de tamaño de iconos y grosor de líneas; nombres de dispositivo al pasar el mouse
+- [ ] v0.7 — Zoom y pan
+- [ ] v0.8 — Exportar a SVG / PNG
 - [ ] v1.0 — Estadísticas de red, alertas de LQI bajo, sugerencias de ubicación de routers
 
 ## Contribuir
